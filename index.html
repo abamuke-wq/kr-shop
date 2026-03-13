@@ -2356,6 +2356,41 @@ renderShippingGrid();
 setLang('en');
 // Update rate display on load
 updateRateDisplay();
+
+// บันทึกออร์เดอร์ไป Google Sheets
+const scriptURL = 'https://script.google.com/macros/s/AKfycbwlqKXC6g9vPyOGxMbBuVFQgOlgQEzRphIk4Lni8QlpkkJBdTfSj98pGA74vBXMkH0R/exec';
+async function saveOrderToSheet(orderData) {
+  try {
+    const payload = {
+      type: "Orders",
+      orderNum: orderData.orderNum,
+      name: orderData.customer.name,
+      phone: orderData.customer.phone,
+      items: JSON.stringify(orderData.items.map(i => ({name: i.product.nameEN, qty: i.qty}))),
+      total: orderData.total
+    };
+
+    fetch(scriptURL, {
+      method: 'POST',
+      mode: 'no-cors',
+      cache: 'no-cache',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    console.log('Order Data Sent!');
+  } catch (err) {
+    console.error('Error:', err);
+  }
+}
+
+// เชื่อมกับปุ่มยืนยันเดิม
+const originalConfirm = confirmAndDownload;
+confirmAndDownload = function() {
+  const d = window._orderData;
+  if (d) saveOrderToSheet(d);
+  originalConfirm();
+};
+  
 </script>
 </body>
 </html>
