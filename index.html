@@ -1325,7 +1325,7 @@ body { font-family:'Nunito',sans-serif; background:var(--g1); color:var(--white)
       <div id="omAddrSection" style="margin-bottom:16px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
           <div style="font-size:13px;font-weight:700;color:var(--teal)"><span data-th="📫 ที่อยู่จัดส่ง" data-en="📫 Shipping Address">📫 Shipping Address</span></div>
-          <button onclick="openAddrModal()" id="omAddrEditBtn" style="padding:5px 14px;background:rgba(0,180,216,0.15);border:1px solid var(--teal);color:var(--teal);border-radius:20px;cursor:pointer;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif">✏️ แก้ไข</button>
+          <button onclick="openAddrModal()" id="omAddrEditBtn" style="padding:5px 14px;background:rgba(0,180,216,0.15);border:1px solid var(--teal);color:var(--teal);border-radius:20px;cursor:pointer;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif"><span data-th="✏️ แก้ไข" data-en="✏️ Edit">✏️ Edit</span></button>
         </div>
         <div id="omAddrDisplay" style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:12px;padding:14px;font-size:13px;line-height:1.8">
           <div id="omAddrEmpty" style="color:var(--muted);text-align:center;padding:8px 0">
@@ -1343,7 +1343,7 @@ body { font-family:'Nunito',sans-serif; background:var(--g1); color:var(--white)
           </div>
         </div>
         <div id="omAddrWarning" style="display:none;background:rgba(231,76,60,0.12);border:1px solid rgba(231,76,60,0.3);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--danger);margin-top:8px;font-weight:600">
-          ⚠️ กรุณากรอกที่อยู่จัดส่งก่อนยืนยันออร์เดอร์
+          ⚠️ <span data-th="กรุณากรอกที่อยู่จัดส่งก่อนยืนยันออร์เดอร์" data-en="Please add your shipping address first">Please add your shipping address first</span>
         </div>
       </div>
 
@@ -1452,7 +1452,7 @@ body { font-family:'Nunito',sans-serif; background:var(--g1); color:var(--white)
       <div id="destCountryList" style="display:flex;flex-direction:column;gap:6px;max-height:380px;overflow-y:auto"></div>
 
       <div style="margin-top:14px;padding:12px;background:rgba(243,156,18,0.1);border:1px solid rgba(243,156,18,0.3);border-radius:10px;font-size:12px;color:var(--warning)">
-        💡 ถ้าประเทศของคุณไม่อยู่ใน list กรุณาติดต่อร้านค้าเพื่อสอบถามค่าขนส่ง
+        💡 <span data-th="ถ้าประเทศของคุณไม่อยู่ใน list กรุณาติดต่อร้านค้าเพื่อสอบถามค่าขนส่ง" data-en="If your country is not in the list, please contact the shop for shipping rates">If your country is not in the list, please contact the shop for shipping rates</span>
       </div>
     </div>
   </div>
@@ -1461,7 +1461,7 @@ body { font-family:'Nunito',sans-serif; background:var(--g1); color:var(--white)
 <div class="addr-overlay" id="addrOverlay">
   <div class="addr-modal">
     <div class="addr-header">
-      <div class="addr-header-title"><span data-th="📫 ที่อยู่จัดส่ง" data-en="📫 Shipping Address">📫 Shipping Address</span></div>
+      <div class="addr-header-title">📫 <span data-th="ที่อยู่จัดส่ง" data-en="Shipping Address">Shipping Address</span></div>
       <button onclick="closeAddrModal()" style="background:rgba(255,255,255,0.15);border:none;color:white;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;font-weight:700">✕</button>
     </div>
     <div class="addr-body">
@@ -1482,26 +1482,26 @@ body { font-family:'Nunito',sans-serif; background:var(--g1); color:var(--white)
       <!-- Step 2: Postal Code -->
       <div class="addr-step" id="astep2">
         <div class="addr-step-label"><span data-th="ขั้นที่ 2 — รหัสไปรษณีย์" data-en="Step 2 — Postal Code">Step 2 — Postal Code</span></div>
-        <div style="font-size:13px;color:var(--muted);margin-bottom:12px">ประเทศที่เลือก: <strong style="color:var(--teal)" id="selectedCountryLabel">-</strong></div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:12px"><span data-th="ประเทศที่เลือก:" data-en="Selected country:">Selected country:</span> <strong style="color:var(--teal)" id="selectedCountryLabel">-</strong></div>
         <div class="form-group">
           <label class="form-label">Postal / ZIP Code</label>
           <div style="display:flex;gap:8px">
             <input type="text" id="postalInput" class="form-input" placeholder="e.g. 10110, SW1A 1AA, 100-0001" style="flex:1">
-            <button onclick="lookupPostal()" style="padding:10px 16px;background:var(--teal);border:none;border-radius:10px;color:white;cursor:pointer;font-weight:700;font-family:'Nunito',sans-serif;white-space:nowrap">🔍 ค้นหา</button>
+            <button onclick="lookupPostal()" style="padding:10px 16px;background:var(--teal);border:none;border-radius:10px;color:white;cursor:pointer;font-weight:700;font-family:'Nunito',sans-serif;white-space:nowrap">🔍 <span data-th="ค้นหา" data-en="Search">Search</span></button>
           </div>
         </div>
         <div class="postal-result" id="postalResult">
-          <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:700">เลือกเมือง / Select City or District:</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:700"><span data-th="เลือกเมือง" data-en="Select City or District">Select City or District</span>:</div>
           <div id="cityList"></div>
         </div>
-        <div id="postalError" style="color:var(--danger);font-size:12px;margin-top:8px;display:none">ไม่พบรหัสไปรษณีย์นี้ กรุณากรอกเมืองเองในขั้นตอนถัดไป</div>
+        <div id="postalError" style="color:var(--danger);font-size:12px;margin-top:8px;display:none"><span data-th="ไม่พบรหัสไปรษณีย์นี้ กรุณากรอกเมืองเองในขั้นตอนถัดไป" data-en="Postal code not found — please enter your city manually in the next step">Postal code not found — please enter your city manually in the next step</span></div>
       </div>
 
       <!-- Step 3: District / Area -->
       <div class="addr-step" id="astep3">
         <div class="addr-step-label"><span data-th="ขั้นที่ 3 — เมือง / เขต" data-en="Step 3 — City / District">Step 3 — City / District</span></div>
         <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--muted)">
-          <strong style="color:white">District</strong> = เขต / อำเภอ / Borough / Arrondissement ขึ้นอยู่กับแต่ละประเทศ
+          <strong style="color:white">District</strong> = <span data-th="เขต / อำเภอ แล้วแต่ประเทศ" data-en="Area / Borough / Arrondissement — varies by country">Area / Borough / Arrondissement — varies by country</span>
         </div>
         <div class="form-group">
           <label class="form-label">City / Town</label>
@@ -1525,7 +1525,7 @@ body { font-family:'Nunito',sans-serif; background:var(--g1); color:var(--white)
           <input type="text" id="addrStreet" class="form-input" placeholder="e.g. Sukhumvit Rd, Baker Street">
         </div>
         <div style="background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.2);border-radius:10px;padding:12px;margin-top:4px;font-size:12px">
-          <div style="color:var(--gold);font-weight:700;margin-bottom:6px">📋 ตัวอย่างที่อยู่ที่จะได้:</div>
+          <div style="color:var(--gold);font-weight:700;margin-bottom:6px">📋 <span data-th="ตัวอย่างที่อยู่ที่จะได้:" data-en="Address preview:">Address preview:</span></div>
           <div id="addrPreview" style="color:rgba(255,255,255,0.8);line-height:1.7;font-size:13px">-</div>
         </div>
       </div>
@@ -2281,7 +2281,7 @@ function openOrderModal() {
       <td class="item-num">${idx+1}</td>
       <td>
         <span class="item-name">${p.emoji} ${name}</span><br>
-        <span class="item-unit" style="font-size:11px;color:var(--muted)">${fmtPrice(p.price)} × ${qty} ชิ้น</span>
+        <span class="item-unit" style="font-size:11px;color:var(--muted)">${fmtPrice(p.price)} × ${qty} ${lang==='th'?'ชิ้น':'pcs'}</span>
       </td>
       <td class="item-qty">${qty}</td>
       <td style="text-align:right;color:var(--muted)">${fmtPrice(p.price)}</td>
@@ -2294,20 +2294,20 @@ function openOrderModal() {
   if(box) {
     const pack = calcPacking(items, boxNum);
     document.getElementById('omDHLDetail').innerHTML = `
-      <div class="dhl-detail-row"><span>กล่อง / Box</span><span>DHL Easy Box ${box.num} (${box.dims} cm)</span></div>
-      <div class="dhl-detail-row"><span>น้ำหนักสูงสุด / Max Weight</span><span>${box.maxKg} kg</span></div>
-      <div class="dhl-detail-row"><span>น้ำหนักสินค้า / Package Weight</span><span>${(totalWeight/1000).toFixed(3)} kg</span></div>
-      <div class="dhl-detail-row"><span>ปริมาตรที่ใช้ / Volume Used</span><span>${pack.usedPct}%</span></div>`;
+      <div class="dhl-detail-row"><span>${lang==='th'?'กล่อง':'Box'}</span><span>DHL Easy Box ${box.num} (${box.dims} cm)</span></div>
+      <div class="dhl-detail-row"><span>${lang==='th'?'น้ำหนักสูงสุด':'Max Weight'}</span><span>${box.maxKg} kg</span></div>
+      <div class="dhl-detail-row"><span>${lang==='th'?'น้ำหนักสินค้า':'Package Weight'}</span><span>${(totalWeight/1000).toFixed(3)} kg</span></div>
+      <div class="dhl-detail-row"><span>${lang==='th'?'ปริมาตรที่ใช้':'Volume Used'}</span><span>${pack.usedPct}%</span></div>`;
     const ps = document.getElementById('omPackingStatus');
     if(pack.fits) {
       ps.style.cssText='background:rgba(46,204,113,0.12);border:1px solid rgba(46,204,113,0.3);color:var(--success)';
-      ps.textContent='✅ สินค้าใส่กล่องได้หมด — All items fit in the selected box';
+      ps.textContent=lang==='th'?'✅ สินค้าใส่กล่องได้หมด':'✅ All items fit in the selected box';
     } else if(!pack.fitsWeight) {
       ps.style.cssText='background:rgba(243,156,18,0.12);border:1px solid rgba(243,156,18,0.3);color:var(--warning)';
-      ps.textContent='⚠️ น้ำหนักเกินกล่องที่เลือก จะถูกคิดราคากล่องที่ใหญ่กว่า';
+      ps.textContent=lang==='th'?'⚠️ น้ำหนักเกินกล่องที่เลือก จะถูกคิดราคากล่องที่ใหญ่กว่า':'⚠️ Weight exceeds selected box — will be charged at higher box rate';
     } else {
       ps.style.cssText='background:rgba(231,76,60,0.12);border:1px solid rgba(231,76,60,0.3);color:var(--danger)';
-      ps.textContent='❌ ปริมาตรสินค้าเกินกล่อง กรุณาลดสินค้าหรือเปลี่ยนกล่อง';
+      ps.textContent=lang==='th'?'❌ ปริมาตรสินค้าเกินกล่อง กรุณาลดสินค้าหรือเปลี่ยนกล่อง':'❌ Volume exceeds box — please reduce items or change box';
     }
   }
 
@@ -2362,7 +2362,7 @@ function confirmAndDownload() {
       <div style="font-size:36px;margin-bottom:8px">✅</div>
       <div style="font-size:16px;font-weight:700;margin-bottom:4px">${lang==='th'?'ยืนยันออร์เดอร์แล้ว!':'Order Confirmed!'}</div>
       <div style="font-size:13px;color:rgba(255,255,255,0.7);margin-bottom:12px">Order #${d.orderNum}</div>
-      <div style="font-size:13px;margin-bottom:8px">${lang==='th'?'กรุณาส่งสลิปผ่าน:':'Please send slip via:'}</div>
+      <div style="font-size:13px;margin-bottom:8px">${lang==='th'?'กรุณาส่งสลิปผ่าน:':'Please send payment slip via:'}</div>
       <div style="font-size:13px">💬 Line: <strong>@krthailandshop</strong></div>
       <div style="font-size:13px;margin-bottom:12px">📱 WhatsApp: <strong>+66638068809</strong></div>
     </div>
@@ -2897,14 +2897,34 @@ let addrData = { country:null, countryCode:null, postal:'', city:'', district:''
 function openAddrModal() {
   addrStep = 1;
   addrData = { country:null, countryCode:null, postal:'', city:'', district:'', houseNo:'', street:'' };
-  // Pre-fill if user already has address
-  if(currentUser && currentUser.country) {
-    const found = COUNTRIES.find(c=>c.name===currentUser.country);
-    if(found) { addrData.country=found.name; addrData.countryCode=found.api; }
+
+  // Auto-fill from destination country selection
+  let autoCountry = null;
+  if(selectedDestCountry && selectedDestCountry !== 'Other (contact shop)') {
+    autoCountry = COUNTRIES.find(c=>c.name===selectedDestCountry);
   }
-  renderCountryGrid('');
-  showAddrStep(1);
+  // Or from previous address
+  if(!autoCountry && currentUser && currentUser.country) {
+    autoCountry = COUNTRIES.find(c=>c.name===currentUser.country);
+  }
+
+  if(autoCountry) {
+    addrData.country = autoCountry.name;
+    addrData.countryCode = autoCountry.api||null;
+    // Update label in step 2
+    setTimeout(()=>{
+      const lbl = document.getElementById('selectedCountryLabel');
+      if(lbl) lbl.textContent = autoCountry.flag + ' ' + autoCountry.name;
+    }, 50);
+    renderCountryGrid('');
+    showAddrStep(2); // Skip step 1 — country already known
+  } else {
+    renderCountryGrid('');
+    showAddrStep(1);
+  }
   document.getElementById('addrOverlay').classList.add('open');
+  // Re-apply language
+  document.querySelectorAll('[data-th]').forEach(el => { el.textContent = lang==='th' ? el.dataset.th : el.dataset.en; });
 }
 
 function closeAddrModal() {
@@ -3011,8 +3031,8 @@ function showAddrStep(step) {
       <button class="addr-save-btn" onclick="saveAddress()"><span data-th="✓ บันทึกที่อยู่" data-en="✓ Save Address">✓ Save Address</span></button>`;
   } else {
     nav.innerHTML = `
-      <button class="addr-back-btn" onclick="showAddrStep(${step-1})">← Back</button>
-      <button class="addr-next-btn" onclick="addrNext(${step})">ถัดไป →</button>`;
+      <button class="addr-back-btn" onclick="showAddrStep(${step-1})">← ${lang==='th'?'ย้อนกลับ':'Back'}</button>
+      <button class="addr-next-btn" onclick="addrNext(${step})">${lang==='th'?'ถัดไป':'Next'} →</button>`;
   }
 }
 
@@ -3020,12 +3040,12 @@ function addrNext(step) {
   if(step===2) {
     const city = document.getElementById('addrCity')?.value?.trim();
     addrData.postal = document.getElementById('postalInput').value.trim();
-    if(!addrData.postal) { showToast('กรุณากรอก Postal Code'); return; }
+    if(!addrData.postal) { showToast(lang==='th'?'กรุณากรอก Postal Code':'Please enter Postal Code'); return; }
   }
   if(step===3) {
     const city = document.getElementById('addrCity').value.trim();
     const dist = document.getElementById('addrDistrict').value.trim();
-    if(!city) { showToast('กรุณากรอกชื่อเมือง'); return; }
+    if(!city) { showToast(lang==='th'?'กรุณากรอกชื่อเมือง':'Please enter your city'); return; }
     addrData.city = city;
     addrData.district = dist;
     updateAddrPreview();
@@ -3051,7 +3071,7 @@ function saveAddress() {
   const street = document.getElementById('addrStreet').value.trim();
   const city = document.getElementById('addrCity').value.trim() || addrData.city;
   const dist = document.getElementById('addrDistrict').value.trim() || addrData.district;
-  if(!house) { showToast('กรุณากรอกบ้านเลขที่'); return; }
+  if(!house) { showToast(lang==='th'?'กรุณากรอกบ้านเลขที่':'Please enter house/unit number'); return; }
 
   addrData.houseNo = house;
   addrData.street = street;
@@ -3076,7 +3096,7 @@ function saveAddress() {
     document.getElementById('omCountry').textContent = currentUser.country || '-';
     document.getElementById('omAddress').textContent = currentUser.address || '-';
   }
-  showToast('บันทึกที่อยู่แล้ว ✓');
+  showToast(lang==='th'?'บันทึกที่อยู่แล้ว ✓':'Address saved ✓');
 }
 
 function updateAddressBadge() {
@@ -3281,6 +3301,11 @@ function refreshOrderModalAddr() {
 
   const hasAddr = currentUser && currentUser.address && currentUser.address.trim();
   emptyEl.style.display = hasAddr ? 'none' : 'block';
+  // Update empty state text language
+  const emptyTxt = document.getElementById('addrEmptyText');
+  const addBtn = document.getElementById('addrAddBtn');
+  if(emptyTxt) emptyTxt.textContent = lang==='th'?'ยังไม่ได้กรอกที่อยู่':'No shipping address yet';
+  if(addBtn) addBtn.textContent = lang==='th'?'+ กรอกที่อยู่จัดส่ง':'+ Add Shipping Address';
   filledEl.style.display = hasAddr ? 'block' : 'none';
 
   if(hasAddr) {
@@ -3302,7 +3327,7 @@ function tryConfirmAndDownload() {
   if(!currentUser || !currentUser.address || !currentUser.address.trim()) {
     document.getElementById('omAddrWarning').style.display = 'block';
     document.getElementById('omAddrSection').scrollIntoView({behavior:'smooth', block:'center'});
-    showToast('⚠️ กรุณากรอกที่อยู่จัดส่งก่อน');
+    showToast(lang==='th'?'⚠️ กรุณากรอกที่อยู่จัดส่งก่อน':'⚠️ Please add your shipping address first');
     return;
   }
   confirmAndDownload();
