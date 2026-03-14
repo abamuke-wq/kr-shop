@@ -2357,39 +2357,71 @@ setLang('en');
 // Update rate display on load
 updateRateDisplay();
 
-// บันทึกออร์เดอร์ไป Google Sheets
+// === ส่วนเชื่อมต่อ Google Sheets (วางเพียงชุดเดียว) ===
 const scriptURL = 'https://script.google.com/macros/s/AKfycbxiq2hVTnBKbhdjlfzxBXL9EvXQfwFAfs3noxOlYOpf_kPiLSYIquDRJeDFyDWFdMxM/exec';
-async function saveOrderToSheet(orderData) {
-  try {
-    const payload = {
-      type: "Orders",
-      orderNum: orderData.orderNum,
-      name: orderData.customer.name,
-      phone: orderData.customer.phone,
-      items: JSON.stringify(orderData.items.map(i => ({name: i.product.nameEN, qty: i.qty}))),
-      total: orderData.total
-    };
 
-    fetch(scriptURL, {
-      method: 'POST',
-      mode: 'no-cors',
-      cache: 'no-cache',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    console.log('Order Data Sent!');
-  } catch (err) {
-    console.error('Error:', err);
-  }
+// ฟังก์ชันดึงข้อมูลสินค้าจาก Sheet
+async function loadProductsFromSheet() {
+    try {
+        const response = await fetch(scriptURL);
+        const data = await response.json();
+        if (data && data.length > 0) {
+            products = data.map(p => ({
+                ...p,
+                w: p.w || 5, l: p.l || 5, h: p.h || 5, status: 'active'
+            }));
+            renderProducts();
+            if (isAdminLoggedIn) renderAdminProducts();
+        }
+    } catch (err) { console.error("Load failed:", err); }
 }
 
-// เชื่อมกับปุ่มยืนยันเดิม
+// ฟังก์ชันส่งออร์เดอร์ใหม่
+async function saveOrderToSheet(orderData) {
+    const payload = {
+        type: "Orders",
+        orderNum: orderData.orderNum,
+        name: orderData.customer.name,
+        phone: orderData.customer.phone,
+        items: orderData.items.map(i => (i.product.nameEN || i.product.nameTH) + " x" + i.qty).join(", "),
+        total: orderData.total
+    };
+    fetch(scriptURL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+}
+
+// ฟังก์ชันอัปเดตสินค้าจาก Admin
+async function updateProductToSheet(id, price, stock) {
+    fetch(scriptURL, {
+        method: 'POST',
+        mode: 'no-cors',
+        body: JSON.stringify({ type: "UpdateProduct", id: id, price: price, stock: stock })
+    });
+}
+
+// === ส่วนเชื่อมโยงกับปุ่มในหน้าเว็บ (Override) ===
+
+// เชื่อมปุ่มยืนยันออร์เดอร์
 const originalConfirm = confirmAndDownload;
 confirmAndDownload = function() {
-  const d = window._orderData;
-  if (d) saveOrderToSheet(d);
-  originalConfirm();
+    const d = window._orderData;
+    if (d) saveOrderToSheet(d);
+    originalConfirm();
 };
+
+// เชื่อมปุ่มบันทึกใน Admin
+const originalSaveProduct = saveProduct;
+saveProduct = async function() {
+    const price = document.getElementById('p-price').value;
+    const stock = document.getElementById('p-stock').value;
+    const id = editingProductId || Date.now();
+    
+    updateProductToSheet(id, price, stock); // ส่งข้อมูลไป Sheet
+    originalSaveProduct(); // บันทึกในระบบหน้าเว็บ
+};
+
+// เริ่มทำงานเมื่อเปิดหน้าเว็บ
+window.addEventListener('DOMContentLoaded', loadProductsFromSheet);
+
 
 
   
