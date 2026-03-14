@@ -3363,31 +3363,42 @@ applyLangTexts('en');
 // Update rate display on load
 updateRateDisplay();
 
-// GOOGLE SHEETS INTEGRATION
-const scriptURL = 'https://script.google.com/macros/s/AKfycbw6SFf0UPL6-ofjdTDKltcBDR2gqCshkS4WtTUX0hvAulWzh3uzFGdfJVisEkDTlt6z/exec';
+// GOOGLE SHEETS INTEGRATION v2 — Full Persistence
+const scriptURL = 'https://script.google.com/macros/s/AKfycbxqw0mefOV6Vlhyw4iUhveMbrRbi-DSe-dyXuklels-bN3V3NbFvP008wGxUyR2CKcQ/exec';
 
+// ─── LOAD ALL DATA ON STARTUP ───
+async function loadAllFromSheet() {
+  await Promise.all([
+    loadProductsFromSheet(),
+    loadSettingsFromSheet(),
+    loadShippingFromSheet()
+  ]);
+}
+
+// ─── PRODUCTS ───
 async function loadProductsFromSheet() {
   try {
-    const resp = await fetch(scriptURL);
+    const resp = await fetch(scriptURL + '?type=products');
     const data = await resp.json();
     if (data && data.length > 0) {
       products = data.map(p => ({
         id: p.id, nameTH: p.nameTH, nameEN: p.nameEN,
         price: parseFloat(p.price)||0, weight: parseFloat(p.weight)||0,
         stock: parseInt(p.stock)||0, category: p.category||'Other',
-        emoji: p.emoji||'📦', w: parseFloat(p.w)||5, l: parseFloat(p.l)||5,
-        h: parseFloat(p.h)||5, status: p.status||'active',
-        descTH: p.descTH||'', descEN: p.descEN||''
+        emoji: p.emoji||'📦', w: parseFloat(p.w)||5,
+        l: parseFloat(p.l)||5, h: parseFloat(p.h)||5,
+        status: p.status||'active', descTH: p.descTH||'', descEN: p.descEN||''
       }));
       renderProducts();
       if (isAdminLoggedIn) renderAdminProducts();
     }
-  } catch (e) { console.error('Sheet load failed:', e); }
+  } catch(e) { console.error('Products load failed:', e); }
 }
 
 async function saveOrderToSheet(d) {
   fetch(scriptURL, { method:'POST', mode:'no-cors', body: JSON.stringify({
-    type:'Orders', orderNum:d.orderNum, name:d.customer.name, phone:d.customer.phone,
+    type:'Orders', orderNum:d.orderNum,
+    name:d.customer.name, phone:d.customer.phone,
     country:d.customer.country||'', address:d.customer.address||'',
     items:d.items.map(i=>(i.product.nameEN||i.product.nameTH)+' x'+i.qty).join(', '),
     total:d.total, shipping:d.shipping
@@ -3398,6 +3409,97 @@ async function updateProductToSheet(p) {
   fetch(scriptURL, { method:'POST', mode:'no-cors', body: JSON.stringify({ type:'UpdateProduct', ...p }) });
 }
 
+async function deleteProductFromSheet(id) {
+  fetch(scriptURL, { method:'POST', mode:'no-cors', body: JSON.stringify({ type:'DeleteProduct', id }) });
+}
+
+// ─── SETTINGS ───
+async function loadSettingsFromSheet() {
+  try {
+    const resp = await fetch(scriptURL + '?type=settings');
+    const data = await resp.json();
+    if (!data || Object.keys(data).length === 0) return;
+    // Apply settings
+    if (data.shopName) { shopSettings.name = data.shopName; document.getElementById('navBrand').textContent = data.shopName; }
+    if (data.shopLine) shopSettings.line = data.shopLine;
+    if (data.shopWA)   shopSettings.wa   = data.shopWA;
+    if (data.usdRate)  { usdRate = parseFloat(data.usdRate); updateRateDisplay(); }
+    if (data.shopIsOpen !== undefined) {
+      shopIsOpen = data.shopIsOpen === 'true' || data.shopIsOpen === true;
+      // Update toggle button UI
+      const btn = document.getElementById('shopToggleBtn');
+      const lbl = document.getElementById('shopStatusLabel');
+      if (btn && lbl) {
+        if (shopIsOpen) {
+          btn.textContent = '🔴 ปิดร้าน'; btn.style.background='rgba(231,76,60,0.2)';
+          btn.style.borderColor='var(--danger)'; btn.style.color='var(--danger)';
+          lbl.textContent='🟢 ร้านเปิดอยู่ · Shop is OPEN'; lbl.style.color='var(--success)';
+        } else {
+          btn.textContent='🟢 เปิดร้าน'; btn.style.background='rgba(46,204,113,0.2)';
+          btn.style.borderColor='var(--success)'; btn.style.color='var(--success)';
+          lbl.textContent='🔴 ร้านปิดอยู่ · Shop is CLOSED'; lbl.style.color='var(--danger)';
+        }
+      }
+    }
+    // Update settings form fields if admin is viewing
+    if (document.getElementById('settingName')) {
+      document.getElementById('settingName').value = shopSettings.name;
+      document.getElementById('settingLine').value = shopSettings.line;
+      document.getElementById('settingWA').value = shopSettings.wa;
+    }
+    if (data.grad1) { document.documentElement.style.setProperty('--grad1', data.grad1); document.getElementById('color1').value = data.grad1; }
+    if (data.grad2) { document.documentElement.style.setProperty('--grad2', data.grad2); document.getElementById('color2').value = data.grad2; }
+    if (data.accent) { document.documentElement.style.setProperty('--accent', data.accent); document.getElementById('color3').value = data.accent; }
+  } catch(e) { console.error('Settings load failed:', e); }
+}
+
+function saveSettingsToSheet() {
+  const settings = {
+    shopName: shopSettings.name,
+    shopLine: shopSettings.line,
+    shopWA: shopSettings.wa,
+    usdRate: usdRate.toString(),
+    shopIsOpen: shopIsOpen.toString(),
+    grad1: document.getElementById('color1')?.value || '',
+    grad2: document.getElementById('color2')?.value || '',
+    accent: document.getElementById('color3')?.value || '',
+  };
+  fetch(scriptURL, { method:'POST', mode:'no-cors', body: JSON.stringify({ type:'SaveSettings', settings }) });
+}
+
+// ─── SHIPPING RATES ───
+async function loadShippingFromSheet() {
+  try {
+    const resp = await fetch(scriptURL + '?type=shipping');
+    const data = await resp.json();
+    if (!data || Object.keys(data).length === 0) return;
+    // data = { 2: { A:500, B:600, ... }, 3: { ... }, ... }
+    Object.keys(data).forEach(boxNum => {
+      const n = parseInt(boxNum);
+      if (zoneShippingRates) {
+        ['A','B','C','D','E'].forEach(z => {
+          if (!zoneShippingRates[z]) zoneShippingRates[z] = {};
+          zoneShippingRates[z][n] = data[boxNum][z] || 0;
+        });
+      }
+    });
+    if (isAdminLoggedIn) renderShippingGrid();
+  } catch(e) { console.error('Shipping load failed:', e); }
+}
+
+function saveShippingToSheet() {
+  // Build rates object: { 2: {A:x, B:x, ...}, 3: {...}, ... }
+  const rates = {};
+  [2,3,4,5,6,7,8].forEach(n => {
+    rates[n] = {};
+    ['A','B','C','D','E'].forEach(z => {
+      rates[n][z] = (zoneShippingRates[z]||{})[n] || 0;
+    });
+  });
+  fetch(scriptURL, { method:'POST', mode:'no-cors', body: JSON.stringify({ type:'SaveShipping', rates }) });
+}
+
+// ─── WRAP EXISTING FUNCTIONS ───
 const _origConfirmDL = confirmAndDownload;
 confirmAndDownload = function() {
   const d = window._orderData;
@@ -3409,10 +3511,66 @@ const _origSaveProd = saveProduct;
 saveProduct = async function() {
   const id = editingProductId;
   _origSaveProd();
-  if(id) { const p = products.find(x=>x.id===id); if(p) updateProductToSheet(p); }
+  setTimeout(() => {
+    const p = id ? products.find(x=>x.id===id) : products[products.length-1];
+    if(p) updateProductToSheet(p);
+  }, 100);
 };
 
-window.addEventListener('load', loadProductsFromSheet);
+const _origDeleteProd = deleteProduct;
+deleteProduct = function(id) {
+  deleteProductFromSheet(id);
+  _origDeleteProd(id);
+};
+
+const _origSaveSettings = saveSettings;
+saveSettings = function() {
+  _origSaveSettings();
+  saveSettingsToSheet();
+};
+
+const _origSaveShipping = saveShipping;
+saveShipping = function() {
+  _origSaveShipping();
+  saveShippingToSheet();
+  showToast('💾 บันทึกและซิงค์ Sheets แล้ว ✓');
+};
+
+const _origToggleShop = toggleShop;
+toggleShop = function() {
+  _origToggleShop();
+  saveSettingsToSheet();
+};
+
+const _origApplyColors = applyColors;
+applyColors = function() {
+  _origApplyColors();
+  saveSettingsToSheet();
+};
+
+const _origSaveUsdRate = saveUsdRate;
+saveUsdRate = function() {
+  _origSaveUsdRate();
+  saveSettingsToSheet();
+};
+
+const _origConfirmAdminOrder = confirmAdminOrder;
+confirmAdminOrder = function(i) {
+  _origConfirmAdminOrder(i);
+  const o = orders[i];
+  if (o) fetch(scriptURL, { method:'POST', mode:'no-cors', body: JSON.stringify({ type:'ConfirmOrder', orderNum: o.num }) });
+};
+
+// ─── LOAD ORDERS FROM SHEET ───
+async function loadOrdersFromSheet() {
+  try {
+    const resp = await fetch(scriptURL + '?type=orders');
+    // Not implemented yet - orders are append-only
+  } catch(e) {}
+}
+
+// ─── STARTUP ───
+window.addEventListener('load', loadAllFromSheet);
 
 // Admin Order Detail Popup
 function closeOrderDetail() {
@@ -3482,6 +3640,8 @@ function viewOrderDetail(i) {
   document.body.appendChild(ov);
 }
 
+
+  
 </script>
 </body>
-</html>
+            </html>
