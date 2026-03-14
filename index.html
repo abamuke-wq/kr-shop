@@ -1834,8 +1834,8 @@ function applyLangTexts(l) {
   if(modeAuto) modeAuto.textContent = t.pickProductsFirst;
   if(modeManual) modeManual.textContent = t.pickBoxFirst;
   // Checkout btn
-  const checkoutBtn = document.getElementById('checkoutBtn');
-  if(checkoutBtn && !checkoutBtn.disabled) checkoutBtn.textContent = t.viewOrder;
+  const checkoutBtnText = document.getElementById('checkoutBtnText');
+  if(checkoutBtnText) checkoutBtnText.textContent = t.viewOrder;
   // Ship to label
   const shipToLabel = document.querySelector('[data-id="shipToLabel"]');
   if(shipToLabel) shipToLabel.textContent = t.shipTo;
@@ -2366,7 +2366,7 @@ function confirmAndDownload() {
       <div style="font-size:13px">💬 Line: <strong>@krthailandshop</strong></div>
       <div style="font-size:13px;margin-bottom:12px">📱 WhatsApp: <strong>+66638068809</strong></div>
     </div>
-    <button class="btn-cancel-order" onclick="closeOrderModal();cart={};renderCart();">${lang==='th'?'✕ ปิดและล้างตะกร้า':'✕ Close & Clear Cart'}</button>\`;
+    <button class="btn-cancel-order" onclick="closeOrderModal();cart={};renderCart();">${lang==='th'?'✕ ปิดและล้างตะกร้า':'✕ Close & Clear Cart'}</button>`;
   cart = {};
   renderCart();
   showToast('✅ ยืนยันแล้ว! Invoice กำลังดาวน์โหลด...');
