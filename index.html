@@ -685,6 +685,100 @@ body { font-family:'Nunito',sans-serif; background:var(--g1); color:var(--white)
 }
 .btn-download:hover { opacity:0.85; }
 
+
+/* ===== ADDRESS POPUP ===== */
+.addr-overlay {
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8);
+  z-index:8000; align-items:center; justify-content:center; padding:16px;
+  backdrop-filter:blur(6px);
+}
+.addr-overlay.open { display:flex; }
+.addr-modal {
+  background:var(--g2); border:1px solid var(--border); border-radius:20px;
+  width:100%; max-width:480px; max-height:90vh; overflow-y:auto;
+  box-shadow:0 24px 80px rgba(0,0,0,0.5);
+}
+.addr-header {
+  background:linear-gradient(135deg,var(--grad1),var(--grad2));
+  padding:18px 24px; border-radius:20px 20px 0 0;
+  display:flex; justify-content:space-between; align-items:center;
+}
+.addr-header-title { font-family:'Playfair Display',serif; font-size:18px; color:var(--gold); }
+.addr-body { padding:24px; }
+.addr-step {
+  display:none;
+}
+.addr-step.active { display:block; }
+.addr-step-label {
+  font-size:11px; color:var(--muted); text-transform:uppercase;
+  letter-spacing:1px; font-weight:700; margin-bottom:16px;
+  padding-bottom:8px; border-bottom:1px solid var(--border);
+}
+.country-grid {
+  display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:16px;
+  max-height:360px; overflow-y:auto;
+}
+.country-option {
+  padding:10px 12px; border:1px solid var(--border); border-radius:10px;
+  cursor:pointer; transition:all 0.2s; font-size:13px; font-weight:600;
+  background:rgba(255,255,255,0.03); display:flex; align-items:center; gap:8px;
+}
+.country-option:hover, .country-option.selected {
+  background:var(--teal); border-color:var(--teal); color:white;
+}
+.country-search {
+  width:100%; padding:10px 14px; background:rgba(255,255,255,0.08);
+  border:1px solid var(--border); border-radius:10px; color:white;
+  font-family:'Nunito',sans-serif; font-size:13px; outline:none;
+  margin-bottom:12px;
+}
+.country-search:focus { border-color:var(--teal); }
+.postal-result {
+  background:rgba(46,204,113,0.1); border:1px solid rgba(46,204,113,0.3);
+  border-radius:10px; padding:12px 14px; margin-top:10px; font-size:13px;
+  display:none;
+}
+.postal-result.show { display:block; }
+.city-option {
+  padding:8px 12px; border:1px solid var(--border); border-radius:8px;
+  cursor:pointer; margin-bottom:6px; font-size:13px; font-weight:600;
+  transition:all 0.2s; background:rgba(255,255,255,0.03);
+}
+.city-option:hover, .city-option.selected { background:var(--teal); border-color:var(--teal); }
+.addr-progress {
+  display:flex; gap:6px; margin-bottom:20px;
+}
+.addr-dot {
+  flex:1; height:4px; border-radius:2px; background:rgba(255,255,255,0.1);
+  transition:background 0.3s;
+}
+.addr-dot.done { background:var(--teal); }
+.addr-dot.active { background:var(--gold); }
+.addr-nav { display:flex; gap:8px; margin-top:20px; }
+.addr-next-btn {
+  flex:1; padding:12px; background:var(--teal); border:none; border-radius:10px;
+  color:white; cursor:pointer; font-size:14px; font-weight:700;
+  font-family:'Nunito',sans-serif; transition:opacity 0.2s;
+}
+.addr-next-btn:hover { opacity:0.85; }
+.addr-back-btn {
+  padding:12px 20px; background:rgba(255,255,255,0.06); border:1px solid var(--border);
+  border-radius:10px; color:var(--muted); cursor:pointer; font-size:13px;
+  font-family:'Nunito',sans-serif;
+}
+.addr-save-btn {
+  flex:1; padding:12px; background:linear-gradient(135deg,var(--success),#27ae60);
+  border:none; border-radius:10px; color:white; cursor:pointer;
+  font-size:14px; font-weight:700; font-family:'Nunito',sans-serif;
+}
+.addr-badge {
+  display:inline-flex; align-items:center; gap:6px;
+  background:rgba(0,180,216,0.15); border:1px solid rgba(0,180,216,0.3);
+  border-radius:20px; padding:5px 12px; font-size:12px; color:var(--teal);
+  font-weight:700; cursor:pointer; transition:all 0.2s; margin-left:8px;
+}
+.addr-badge:hover { background:rgba(0,180,216,0.3); }
+
 /* Toast */
 .toast {
   position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px);
@@ -845,10 +939,15 @@ body { font-family:'Nunito',sans-serif; background:var(--g1); color:var(--white)
   <div class="shop-header">
     <div class="shop-header-top">
       <div class="shop-title" data-th="เลือกสินค้า" data-en="Browse Products">Browse Products</div>
-      <div class="user-badge">
-        <span>👤</span>
-        <span id="userBadge">Guest</span>
-        <span style="cursor:pointer;color:var(--accent)" onclick="logout()">✕</span>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <div class="user-badge">
+          <span>👤</span>
+          <span id="userBadge">Guest</span>
+          <span style="cursor:pointer;color:var(--accent)" onclick="logout()">✕</span>
+        </div>
+        <div class="addr-badge" id="addrBadge" onclick="openAddrModal()">
+          📫 เพิ่มที่อยู่จัดส่ง
+        </div>
       </div>
     </div>
     <div class="search-bar" style="margin-top:12px">
@@ -1318,6 +1417,84 @@ body { font-family:'Nunito',sans-serif; background:var(--g1); color:var(--white)
   </div>
 </div>
 
+<!-- ===== ADDRESS POPUP ===== -->
+<div class="addr-overlay" id="addrOverlay">
+  <div class="addr-modal">
+    <div class="addr-header">
+      <div class="addr-header-title">📫 ที่อยู่จัดส่ง</div>
+      <button onclick="closeAddrModal()" style="background:rgba(255,255,255,0.15);border:none;color:white;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;font-weight:700">✕</button>
+    </div>
+    <div class="addr-body">
+      <div class="addr-progress">
+        <div class="addr-dot active" id="adot1"></div>
+        <div class="addr-dot" id="adot2"></div>
+        <div class="addr-dot" id="adot3"></div>
+        <div class="addr-dot" id="adot4"></div>
+      </div>
+
+      <!-- Step 1: Country -->
+      <div class="addr-step active" id="astep1">
+        <div class="addr-step-label">Step 1 / 4 — เลือกประเทศ / Select Country</div>
+        <input type="text" class="country-search" id="countrySearch" oninput="filterCountries(this.value)" placeholder="🔍 Search country...">
+        <div class="country-grid" id="countryGrid"></div>
+      </div>
+
+      <!-- Step 2: Postal Code -->
+      <div class="addr-step" id="astep2">
+        <div class="addr-step-label">Step 2 / 4 — รหัสไปรษณีย์ / Postal Code</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:12px">ประเทศที่เลือก: <strong style="color:var(--teal)" id="selectedCountryLabel">-</strong></div>
+        <div class="form-group">
+          <label class="form-label">Postal / ZIP Code</label>
+          <div style="display:flex;gap:8px">
+            <input type="text" id="postalInput" class="form-input" placeholder="e.g. 10110, SW1A 1AA, 100-0001" style="flex:1">
+            <button onclick="lookupPostal()" style="padding:10px 16px;background:var(--teal);border:none;border-radius:10px;color:white;cursor:pointer;font-weight:700;font-family:'Nunito',sans-serif;white-space:nowrap">🔍 ค้นหา</button>
+          </div>
+        </div>
+        <div class="postal-result" id="postalResult">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:700">เลือกเมือง / Select City or District:</div>
+          <div id="cityList"></div>
+        </div>
+        <div id="postalError" style="color:var(--danger);font-size:12px;margin-top:8px;display:none">ไม่พบรหัสไปรษณีย์นี้ กรุณากรอกเมืองเองในขั้นตอนถัดไป</div>
+      </div>
+
+      <!-- Step 3: District / Area -->
+      <div class="addr-step" id="astep3">
+        <div class="addr-step-label">Step 3 / 4 — เมือง / District / Area</div>
+        <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--muted)">
+          <strong style="color:white">District</strong> = เขต / อำเภอ / Borough / Arrondissement ขึ้นอยู่กับแต่ละประเทศ
+        </div>
+        <div class="form-group">
+          <label class="form-label">City / Town</label>
+          <input type="text" id="addrCity" class="form-input" placeholder="e.g. Bangkok, London, Tokyo">
+        </div>
+        <div class="form-group">
+          <label class="form-label">District / Area / State</label>
+          <input type="text" id="addrDistrict" class="form-input" placeholder="e.g. Sukhumvit, Westminster, Shibuya">
+        </div>
+      </div>
+
+      <!-- Step 4: House / Unit No. -->
+      <div class="addr-step" id="astep4">
+        <div class="addr-step-label">Step 4 / 4 — บ้านเลขที่ / House Details</div>
+        <div class="form-group">
+          <label class="form-label">House / Unit / Room No.</label>
+          <input type="text" id="addrHouseNo" class="form-input" placeholder="e.g. 123/45, Apt 6B, Unit 7">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Street / Road / Building (optional)</label>
+          <input type="text" id="addrStreet" class="form-input" placeholder="e.g. Sukhumvit Rd, Baker Street">
+        </div>
+        <div style="background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.2);border-radius:10px;padding:12px;margin-top:4px;font-size:12px">
+          <div style="color:var(--gold);font-weight:700;margin-bottom:6px">📋 ตัวอย่างที่อยู่ที่จะได้:</div>
+          <div id="addrPreview" style="color:rgba(255,255,255,0.8);line-height:1.7;font-size:13px">-</div>
+        </div>
+      </div>
+
+      <div class="addr-nav" id="addrNav"></div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1497,6 +1674,7 @@ function doLogin() {
   renderProducts();
   renderCart();
   showPage('shop');
+  updateAddressBadge();
   showToast(`Welcome, ${name}! 👋`);
 }
 
@@ -1705,6 +1883,13 @@ function updateCartQty(id,d) {
   if(cart[id]<=0) delete cart[id];
   renderCart();
 }
+function setCartQty(id, val) {
+  const n = parseInt(val);
+  if(!n || n < 1) { cart[id]=1; }
+  else if(n > 999) { cart[id]=999; }
+  else { cart[id]=n; }
+  renderCart();
+}
 
 // ===== 3D PACKING LOGIC =====
 function calcPacking(items, boxNum) {
@@ -1774,7 +1959,10 @@ function renderCart() {
       </div>
       <div class="cart-qty-ctrl">
         <button class="qty-btn" onclick="updateCartQty(${p.id},-1)">−</button>
-        <span style="font-size:13px;font-weight:700;min-width:20px;text-align:center">${qty}</span>
+        <input type="number" min="1" max="999" value="${qty}"
+          style="width:42px;text-align:center;background:rgba(255,255,255,0.08);border:1px solid var(--border);border-radius:6px;color:white;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;padding:2px 4px;outline:none;"
+          onchange="setCartQty(${p.id}, this.value)"
+          onclick="this.select()">
         <button class="qty-btn" onclick="updateCartQty(${p.id},1)">+</button>
       </div>
       <div class="cart-price">${fmtPrice(p.price*qty)}</div>
@@ -2366,6 +2554,236 @@ function createParticles() {
   }
 }
 
+
+// ===== ADDRESS POPUP =====
+const COUNTRIES = [
+  {code:'AU',flag:'🇦🇺',name:'Australia',api:'au'},
+  {code:'AT',flag:'🇦🇹',name:'Austria',api:'at'},
+  {code:'BE',flag:'🇧🇪',name:'Belgium',api:'be'},
+  {code:'CA',flag:'🇨🇦',name:'Canada',api:'ca'},
+  {code:'DK',flag:'🇩🇰',name:'Denmark',api:'dk'},
+  {code:'FI',flag:'🇫🇮',name:'Finland',api:'fi'},
+  {code:'FR',flag:'🇫🇷',name:'France',api:'fr'},
+  {code:'DE',flag:'🇩🇪',name:'Germany',api:'de'},
+  {code:'HK',flag:'🇭🇰',name:'Hong Kong',api:null},
+  {code:'IN',flag:'🇮🇳',name:'India',api:'in'},
+  {code:'ID',flag:'🇮🇩',name:'Indonesia',api:'id'},
+  {code:'IT',flag:'🇮🇹',name:'Italy',api:'it'},
+  {code:'JP',flag:'🇯🇵',name:'Japan',api:'jp'},
+  {code:'MY',flag:'🇲🇾',name:'Malaysia',api:'my'},
+  {code:'NL',flag:'🇳🇱',name:'Netherlands',api:'nl'},
+  {code:'NZ',flag:'🇳🇿',name:'New Zealand',api:'nz'},
+  {code:'NO',flag:'🇳🇴',name:'Norway',api:'no'},
+  {code:'PH',flag:'🇵🇭',name:'Philippines',api:'ph'},
+  {code:'SG',flag:'🇸🇬',name:'Singapore',api:'sg'},
+  {code:'KR',flag:'🇰🇷',name:'South Korea',api:'kr'},
+  {code:'ES',flag:'🇪🇸',name:'Spain',api:'es'},
+  {code:'SE',flag:'🇸🇪',name:'Sweden',api:'se'},
+  {code:'CH',flag:'🇨🇭',name:'Switzerland',api:'ch'},
+  {code:'TW',flag:'🇹🇼',name:'Taiwan',api:null},
+  {code:'TH',flag:'🇹🇭',name:'Thailand',api:null},
+  {code:'GB',flag:'🇬🇧',name:'United Kingdom',api:'gb'},
+  {code:'US',flag:'🇺🇸',name:'United States',api:'us'},
+  {code:'VN',flag:'🇻🇳',name:'Vietnam',api:null},
+  {code:'CN',flag:'🇨🇳',name:'China',api:null},
+  {code:'OTHER',flag:'🌍',name:'Other',api:null},
+];
+
+let addrStep = 1;
+let addrData = { country:null, countryCode:null, postal:'', city:'', district:'', houseNo:'', street:'' };
+
+function openAddrModal() {
+  addrStep = 1;
+  addrData = { country:null, countryCode:null, postal:'', city:'', district:'', houseNo:'', street:'' };
+  // Pre-fill if user already has address
+  if(currentUser && currentUser.country) {
+    const found = COUNTRIES.find(c=>c.name===currentUser.country);
+    if(found) { addrData.country=found.name; addrData.countryCode=found.api; }
+  }
+  renderCountryGrid('');
+  showAddrStep(1);
+  document.getElementById('addrOverlay').classList.add('open');
+}
+
+function closeAddrModal() {
+  document.getElementById('addrOverlay').classList.remove('open');
+}
+
+function filterCountries(q) {
+  renderCountryGrid(q.toLowerCase());
+}
+
+function renderCountryGrid(q) {
+  const grid = document.getElementById('countryGrid');
+  const filtered = q ? COUNTRIES.filter(c=>c.name.toLowerCase().includes(q)) : COUNTRIES;
+  grid.innerHTML = filtered.map(c => `
+    <div class="country-option ${addrData.country===c.name?'selected':''}" onclick="selectCountry('${c.name}','${c.api||''}','${c.flag}')">
+      <span style="font-size:18px">${c.flag}</span>
+      <span>${c.name}</span>
+    </div>`).join('');
+}
+
+function selectCountry(name, api, flag) {
+  addrData.country = name;
+  addrData.countryCode = api || null;
+  renderCountryGrid(document.getElementById('countrySearch').value.toLowerCase());
+  document.getElementById('selectedCountryLabel').textContent = flag + ' ' + name;
+  setTimeout(()=>showAddrStep(2), 250);
+}
+
+async function lookupPostal() {
+  const postal = document.getElementById('postalInput').value.trim();
+  const errEl = document.getElementById('postalError');
+  const resultEl = document.getElementById('postalResult');
+  const cityList = document.getElementById('cityList');
+  errEl.style.display = 'none';
+  resultEl.classList.remove('show');
+  if(!postal) { showToast('กรุณากรอก Postal Code'); return; }
+  addrData.postal = postal;
+
+  if(!addrData.countryCode) {
+    // No API support for this country - skip to next step
+    document.getElementById('addrCity').value = '';
+    showAddrStep(3);
+    return;
+  }
+
+  try {
+    const res = await fetch(`https://api.zippopotam.us/${addrData.countryCode}/${encodeURIComponent(postal)}`);
+    if(!res.ok) throw new Error('not found');
+    const data = await res.json();
+    const places = data.places || [];
+    if(places.length === 0) throw new Error('no places');
+
+    cityList.innerHTML = places.map((p,i) => `
+      <div class="city-option ${i===0?'selected':''}" onclick="selectCity(this,'${p['place name'].replace(/'/g,"\'")}','${(p['state']||p['state abbreviation']||'').replace(/'/g,"\'")}')">
+        📍 ${p['place name']}${p['state']?' · '+p['state']:''}
+      </div>`).join('');
+    resultEl.classList.add('show');
+
+    // Auto-select first
+    if(places[0]) {
+      addrData.city = places[0]['place name'];
+      addrData.district = places[0]['state'] || places[0]['state abbreviation'] || '';
+    }
+  } catch(e) {
+    errEl.style.display = 'block';
+    cityList.innerHTML = '';
+  }
+}
+
+function selectCity(el, city, state) {
+  document.querySelectorAll('.city-option').forEach(x=>x.classList.remove('selected'));
+  el.classList.add('selected');
+  addrData.city = city;
+  addrData.district = state;
+  setTimeout(()=>showAddrStep(3), 250);
+}
+
+function showAddrStep(step) {
+  addrStep = step;
+  document.querySelectorAll('.addr-step').forEach((el,i)=>el.classList.toggle('active', i+1===step));
+  const dots = document.querySelectorAll('.addr-dot');
+  dots.forEach((d,i) => {
+    d.classList.remove('active','done');
+    if(i+1 < step) d.classList.add('done');
+    else if(i+1 === step) d.classList.add('active');
+  });
+
+  // Pre-fill step 3 fields if we have data
+  if(step===3) {
+    if(addrData.city) document.getElementById('addrCity').value = addrData.city;
+    if(addrData.district) document.getElementById('addrDistrict').value = addrData.district;
+  }
+
+  // Update preview in step 4
+  if(step===4) updateAddrPreview();
+
+  // Render nav buttons
+  const nav = document.getElementById('addrNav');
+  if(step===1) {
+    nav.innerHTML = '';
+  } else if(step===4) {
+    nav.innerHTML = `
+      <button class="addr-back-btn" onclick="showAddrStep(3)">← Back</button>
+      <button class="addr-save-btn" onclick="saveAddress()">✓ บันทึกที่อยู่</button>`;
+  } else {
+    nav.innerHTML = `
+      <button class="addr-back-btn" onclick="showAddrStep(${step-1})">← Back</button>
+      <button class="addr-next-btn" onclick="addrNext(${step})">ถัดไป →</button>`;
+  }
+}
+
+function addrNext(step) {
+  if(step===2) {
+    const city = document.getElementById('addrCity')?.value?.trim();
+    addrData.postal = document.getElementById('postalInput').value.trim();
+    if(!addrData.postal) { showToast('กรุณากรอก Postal Code'); return; }
+  }
+  if(step===3) {
+    const city = document.getElementById('addrCity').value.trim();
+    const dist = document.getElementById('addrDistrict').value.trim();
+    if(!city) { showToast('กรุณากรอกชื่อเมือง'); return; }
+    addrData.city = city;
+    addrData.district = dist;
+    updateAddrPreview();
+  }
+  showAddrStep(step+1);
+}
+
+function updateAddrPreview() {
+  const city = document.getElementById('addrCity')?.value?.trim() || addrData.city || '';
+  const dist = document.getElementById('addrDistrict')?.value?.trim() || addrData.district || '';
+  const house = document.getElementById('addrHouseNo')?.value?.trim() || '';
+  const street = document.getElementById('addrStreet')?.value?.trim() || '';
+  const parts = [house, street, dist, city, addrData.postal, addrData.country].filter(Boolean);
+  document.getElementById('addrPreview').textContent = parts.join('\n');
+
+  // Update live preview as user types
+  document.getElementById('addrHouseNo')?.addEventListener('input', updateAddrPreview);
+  document.getElementById('addrStreet')?.addEventListener('input', updateAddrPreview);
+}
+
+function saveAddress() {
+  const house = document.getElementById('addrHouseNo').value.trim();
+  const street = document.getElementById('addrStreet').value.trim();
+  const city = document.getElementById('addrCity').value.trim() || addrData.city;
+  const dist = document.getElementById('addrDistrict').value.trim() || addrData.district;
+  if(!house) { showToast('กรุณากรอกบ้านเลขที่'); return; }
+
+  addrData.houseNo = house;
+  addrData.street = street;
+  addrData.city = city;
+  addrData.district = dist;
+
+  const fullAddress = [house, street, dist, city, addrData.postal].filter(Boolean).join(', ');
+
+  if(currentUser) {
+    currentUser.country = addrData.country;
+    currentUser.address = fullAddress;
+    // Update badge
+    updateAddressBadge();
+  }
+  closeAddrModal();
+  showToast('บันทึกที่อยู่แล้ว ✓');
+}
+
+function updateAddressBadge() {
+  const badge = document.getElementById('addrBadge');
+  if(!badge) return;
+  if(currentUser && currentUser.address) {
+    badge.innerHTML = '📫 ' + (currentUser.country||'') + ' · ' + currentUser.address.substring(0,30) + (currentUser.address.length>30?'...':'');
+    badge.style.borderColor = 'var(--success)';
+    badge.style.color = 'var(--success)';
+    badge.style.background = 'rgba(46,204,113,0.1)';
+  } else {
+    badge.innerHTML = '📫 เพิ่มที่อยู่จัดส่ง';
+    badge.style.borderColor = 'rgba(0,180,216,0.3)';
+    badge.style.color = 'var(--teal)';
+    badge.style.background = 'rgba(0,180,216,0.15)';
+  }
+}
+
 // ===== TOAST =====
 function showToast(msg) {
   const t = document.getElementById('toast');
@@ -2504,7 +2922,7 @@ function viewOrderDetail(i) {
     +'</div>';
   document.body.appendChild(ov);
 }
- 
+
 </script>
 </body>
 </html>
