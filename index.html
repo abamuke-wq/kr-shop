@@ -3627,24 +3627,27 @@ async function loadOrdersFromSheet() {
     const resp = await fetch(scriptURL + '?type=orders');
     const data = await resp.json();
     if (data && data.length > 0) {
-      // ปรับจูนข้อมูลให้เข้ากับความต้องการของหน้า Admin Order Detail
+      // ดึงข้อมูลโดยอ้างอิงลำดับคอลัมน์ใน Google Sheets ของคุณ
       orders = data.map(o => {
-        const parsedItems = parseOrderItems(o.items || o.รายการสินค้า);
-        const subTotal = parseFloat(o.total || o.ยอดรวม) || 0;
-        const shipFee = parseFloat(o.shipping || o.ค่าจัดส่ง) || 0;
-        
+        // หาค่าจากชื่อคอลัมน์ที่เป็นไปได้ (รองรับทั้งไทยและอังกฤษ)
+        const orderId = o.orderNum || o["เลขที่สั่งซื้อ"] || "N/A";
+        const customerName = o.name || o["ชื่อลูกค้า"] || "No Name";
+        const itemsList = o.items || o["รายการสินค้า"] || "";
+        const grandTotal = parseFloat(o.total || o["ยอดรวม"]) || 0;
+        const shipFee = parseFloat(o.shipping || o["ค่าจัดส่ง"]) || 0;
+
         return {
-          num: o.orderNum || o.เลขที่สั่งซื้อ || 'N/A',
-          date: o.date || o.วันที่ || '',
-          customer: o.name || o.ชื่อลูกค้า || 'No Name',
-          phone: o.phone || o.เบอร์โทร || '',
-          country: o.country || o.ประเทศ || '',
-          address: o.address || o.ที่อยู่ || '',
-          items: parsedItems,
-          totalProduct: subTotal,
+          num: orderId,
+          date: o.date || o["วันที่"] || "",
+          customer: customerName,
+          phone: o.phone || o["เบอร์โทร"] || "",
+          country: o.country || o["ประเทศ"] || "",
+          address: o.address || o["ที่อยู่"] || "",
+          items: parseOrderItems(itemsList),
+          totalProduct: grandTotal - shipFee, // คำนวณราคาสินค้าแยกจากค่าส่ง
           shipping: shipFee,
-          total: subTotal + shipFee,
-          status: (o.status || o.สถานะ || 'pending').toLowerCase()
+          total: grandTotal,
+          status: (o.status || o["สถานะ"] || "pending").toLowerCase()
         };
       });
       if (typeof renderAdminOrders === 'function') renderAdminOrders();
