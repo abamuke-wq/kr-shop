@@ -2469,7 +2469,7 @@ function generateInvoicePDF(d) {
           </tr>
           <tr style="border-bottom:1px solid #eee">
             <td style="padding:10px 0;font-size:13px;font-weight:700;color:#333">Swift Code</td>
-            <td style="padding:10px 0;font-size:13px;color:#1a1a2e;font-weight:700;letter-spacing:1px">KASITHBKXXX</td>
+            <td style="padding:10px 0;font-size:13px;color:#1a1a2e;font-weight:700;letter-spacing:1px">KASITHBK</td>
           </tr>
           <tr style="border-bottom:1px solid #eee">
             <td style="padding:10px 0;font-size:13px;font-weight:700;color:#333">Address</td>
@@ -2617,6 +2617,84 @@ function renderAdminProducts() {
   }).join('');
 }
 
+// ─── 1. ตัวแปรควบคุมหน้าสำหรับ ADMIN ORDERS ───
+let adminCurrentPage = 1;
+const adminPageSize = 10;
+
+// ─── 2. ฟังก์ชันวาดรายการออร์เดอร์ (แทนที่ตัวเดิมถ้ามี) ───
+function renderAdminOrders() {
+  // ลองหาคอนเทนเนอร์ตาม ID ที่ใช้ใน HTML ของคุณ (ถ้าไม่ใช่ admin-orders-list ให้เปลี่ยนชื่อในบรรทัดนี้)
+  const container = document.getElementById('admin-orders-list') || document.getElementById('adminOrderList'); 
+  if (!container) return;
+
+  // เรียงออร์เดอร์ใหม่ล่าสุดขึ้นก่อน
+  const sortedOrders = [...orders].reverse();
+
+  // คำนวณช่วงของข้อมูลที่จะแสดง (หน้าละ 10)
+  const start = (adminCurrentPage - 1) * adminPageSize;
+  const end = start + adminPageSize;
+  const paginatedOrders = sortedOrders.slice(start, end);
+
+  if (orders.length === 0) {
+    container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted);background:rgba(255,255,255,0.02);border-radius:15px">No orders yet.</div>';
+    return;
+  }
+
+  // วาดรายการออร์เดอร์แต่ละอัน
+  let html = paginatedOrders.map((o) => {
+    // หาตำแหน่ง Index ที่แท้จริงในตัวแปร orders เพื่อให้กด Details แล้วข้อมูลตรงตัว
+    const actualIdx = orders.findIndex(x => x.num === o.num);
+    const statusClass = (o.status || 'pending').toLowerCase();
+    
+    return `
+      <div class="order-card-admin" onclick="viewOrderDetail(${actualIdx})" 
+           style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:15px; padding:15px; margin-bottom:12px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="color:var(--gold); font-weight:700; font-size:14px; margin-bottom:4px;">${o.num}</div>
+          <div style="font-size:11px; color:var(--muted);">${o.date} • ${o.customer}</div>
+          <div style="font-size:12px; color:var(--teal); margin-top:4px; font-weight:600;">฿${o.total.toLocaleString()}</div>
+        </div>
+        <div style="text-align:right;">
+          <span class="order-status status-${statusClass}" style="font-size:10px; padding:4px 10px; border-radius:20px;">
+            ${statusClass.toUpperCase()}
+          </span>
+          <div style="margin-top:8px;"><button class="edit-btn-sm" style="font-size:11px; padding:4px 12px;">🔍 Details</button></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // ─── 3. ส่วนควบคุมการเปลี่ยนหน้า (Pagination) ───
+  const totalPages = Math.ceil(orders.length / adminPageSize);
+  if (totalPages > 1) {
+    html += `
+      <div style="display:flex; justify-content:center; align-items:center; gap:20px; padding:20px; margin-top:10px;">
+        <button onclick="changeAdminPage(-1)" ${adminCurrentPage === 1 ? 'disabled' : ''} 
+                style="background:var(--border); border:none; color:white; padding:8px 16px; border-radius:10px; cursor:pointer; font-size:12px; opacity:${adminCurrentPage === 1 ? 0.3 : 1}">
+          Back
+        </button>
+        <span style="font-size:13px; color:var(--muted); font-weight:600;">Page ${adminCurrentPage} / ${totalPages}</span>
+        <button onclick="changeAdminPage(1)" ${adminCurrentPage === totalPages ? 'disabled' : ''} 
+                style="background:var(--border); border:none; color:white; padding:8px 16px; border-radius:10px; cursor:pointer; font-size:12px; opacity:${adminCurrentPage === totalPages ? 0.3 : 1}">
+          Next
+        </button>
+      </div>
+    `;
+  }
+
+  container.innerHTML = html;
+}
+
+// ─── 4. ฟังก์ชันสำหรับเปลี่ยนหน้า ───
+function changeAdminPage(step) {
+  adminCurrentPage += step;
+  renderAdminOrders();
+  // เลื่อนกลับไปด้านบนสุดของรายการออร์เดอร์
+  const container = document.getElementById('admin-orders-list') || document.getElementById('adminOrderList');
+  if (container) container.scrollIntoView({ behavior: 'smooth' });
+}
+  
+  
 let activeShipZone = 'A';
 
 function renderShippingGrid() {
@@ -2836,14 +2914,18 @@ function saveProduct() {
     imageData: currentImageData !== null ? currentImageData : (editingProductId ? (products.find(p=>p.id===editingProductId)||{}).imageData||null : null),
   };
   
-  if(!data.nameTH||!data.nameEN||!data.price||!data.weight) { showToast('Please fill all required fields'); return; }
+  if(!data.nameTH||!data.nameEN||!data.price||!data.weight) { 
+    showToast('Please fill all required fields'); 
+    return; 
+  }
   
   if(editingProductId) {
     const idx = products.findIndex(p=>p.id===editingProductId);
     products[idx] = {...products[idx],...data};
     showToast(lang==='th'?'แก้ไขแล้ว ✓':'Updated ✓');
   } else {
-    products.push({id:Date.now(),...data});
+    const newProd = {id:Date.now(),...data};
+    products.push(newProd);
     showToast(lang==='th'?'เพิ่มสินค้าแล้ว ✓':'Product added ✓');
   }
   
@@ -2863,7 +2945,6 @@ function deleteProduct(id) {
   renderCart();
   showToast(lang==='th'?'ลบแล้ว':'Deleted');
 }
-
 
 // ===== SETTINGS =====
 function saveSettings() {
@@ -3418,21 +3499,36 @@ async function loadAllFromSheet() {
 // ─── PRODUCTS ───
 async function loadProductsFromSheet() {
   try {
+    // ดึงข้อมูลสินค้าโดยระบุ type=products
     const resp = await fetch(scriptURL + '?type=products');
     const data = await resp.json();
+    
     if (data && data.length > 0) {
       products = data.map(p => ({
-        id: p.id, nameTH: p.nameTH, nameEN: p.nameEN,
-        price: parseFloat(p.price)||0, weight: parseFloat(p.weight)||0,
-        stock: parseInt(p.stock)||0, category: p.category||'Other',
-        emoji: p.emoji||'📦', w: parseFloat(p.w)||5,
-        l: parseFloat(p.l)||5, h: parseFloat(p.h)||5,
-        status: p.status||'active', descTH: p.descTH||'', descEN: p.descEN||''
+        id: p.id, 
+        nameTH: p.nameTH, 
+        nameEN: p.nameEN,
+        price: parseFloat(p.price) || 0, 
+        weight: parseFloat(p.weight) || 0,
+        stock: parseInt(p.stock) || 0, 
+        category: p.category || 'Other',
+        emoji: p.emoji || '📦', 
+        w: parseFloat(p.w) || 5,
+        l: parseFloat(p.l) || 5, 
+        h: parseFloat(p.h) || 5,
+        status: p.status || 'active', 
+        descTH: p.descTH || '', 
+        descEN: p.descEN || '',
+        // ✅ เพิ่มบรรทัดนี้เพื่อให้เว็บดึงรหัสรูปภาพมาจาก Google Sheets คอลัมน์ O
+        imageData: p.imageData || null 
       }));
-      renderProducts();
-      if (isAdminLoggedIn) renderAdminProducts();
+      
+      renderProducts(); // วาดรายการสินค้าใหม่หน้าลูกค้า
+      if (typeof isAdminLoggedIn !== 'undefined' && isAdminLoggedIn) renderAdminProducts(); // วาดรายการหน้า Admin
     }
-  } catch(e) { console.error('Products load failed:', e); }
+  } catch(e) { 
+    console.error('Products load failed:', e); 
+  }
 }
 
 async function saveOrderToSheet(d) {
@@ -3446,12 +3542,14 @@ async function saveOrderToSheet(d) {
 }
 
 async function updateProductToSheet(p) {
+  // ส่งข้อมูลสินค้าทั้งหมด (รวมถึง imageData) ไปบันทึกที่ Sheets
   fetch(scriptURL, { method:'POST', mode:'no-cors', body: JSON.stringify({ type:'UpdateProduct', ...p }) });
 }
 
 async function deleteProductFromSheet(id) {
   fetch(scriptURL, { method:'POST', mode:'no-cors', body: JSON.stringify({ type:'DeleteProduct', id }) });
 }
+
 
 // ─── SETTINGS ───
 async function loadSettingsFromSheet() {
@@ -3607,26 +3705,22 @@ async function loadOrdersFromSheet() {
     const resp = await fetch(scriptURL + '?type=orders');
     const data = await resp.json();
     if (data && data.length > 0) {
-      // ปรับจูนข้อมูลให้เข้ากับความต้องการของหน้า Admin Order Detail
-      orders = data.map(o => {
-        const parsedItems = parseOrderItems(o.items || o.รายการสินค้า);
-        const subTotal = parseFloat(o.total || o.ยอดรวม) || 0;
-        const shipFee = parseFloat(o.shipping || o.ค่าจัดส่ง) || 0;
-        
-        return {
-          num: o.orderNum || o.เลขที่สั่งซื้อ || 'N/A',
-          date: o.date || o.วันที่ || '',
-          customer: o.name || o.ชื่อลูกค้า || 'No Name',
-          phone: o.phone || o.เบอร์โทร || '',
-          country: o.country || o.ประเทศ || '',
-          address: o.address || o.ที่อยู่ || '',
-          items: parsedItems,
-          totalProduct: subTotal,
-          shipping: shipFee,
-          total: subTotal + shipFee,
-          status: (o.status || o.สถานะ || 'pending').toLowerCase()
-        };
-      });
+      // แปลงข้อมูลจาก Sheet กลับเป็นรูปแบบที่หน้าเว็บเข้าใจ
+      orders = data.map(o => ({
+        orderNum: o.orderNum,
+        date: o.date,
+        customer: {
+          name: o.name,
+          phone: o.phone,
+          country: o.country,
+          address: o.address
+        },
+        items: parseOrderItems(o.items), // ฟังก์ชันช่วยแยกรายการสินค้า
+        total: parseFloat(o.total) || 0,
+        shipping: parseFloat(o.shipping) || 0,
+        status: o.status || 'Pending'
+      }));
+      // สั่งให้วาดรายการออร์เดอร์ในหน้า Admin
       if (typeof renderAdminOrders === 'function') renderAdminOrders();
     }
   } catch(e) {
@@ -3634,98 +3728,91 @@ async function loadOrdersFromSheet() {
   }
 }
 
+// ฟังก์ชันช่วยแปลงข้อความสินค้า (เช่น "Soap x2, Boiled beans x1") กลับเป็น Array
 function parseOrderItems(itemsStr) {
   if (!itemsStr) return [];
-  if (Array.isArray(itemsStr)) return itemsStr; // ถ้าเป็น Array อยู่แล้ว
+  // หมายเหตุ: ตรงนี้เป็นการดึงชื่อมาโชว์เบื้องต้น เพราะใน Sheet เราเก็บเป็นข้อความรวม
   return itemsStr.split(', ').map(item => {
     const parts = item.split(' x');
     return {
-      product: { nameEN: parts[0], emoji: '📦', price: 0 }, // ใส่ราคาจำลองไว้ก่อน
+      product: { nameEN: parts[0], emoji: '📦' },
       qty: parseInt(parts[1]) || 1
     };
   });
 }
 
+
 // ─── STARTUP ───
-// แก้ไข loadAllFromSheet ให้มั่นใจว่าสั่งรัน loadOrders ด้วย
-async function loadAllFromSheet() {
-  await loadProductsFromSheet();
-  await loadOrdersFromSheet();
-}
 window.addEventListener('load', loadAllFromSheet);
 
-// ─── ADMIN ORDER DETAIL POPUP ───
+// Admin Order Detail Popup
 function closeOrderDetail() {
   const el = document.getElementById('orderDetailOverlay');
   if(el) el.remove();
 }
-
 function viewOrderDetail(i) {
   const o = orders[i];
-  if(!o) return;
-
-  const rows = (o.items || []).map(({product:p, qty}, idx) => {
-    const nm = p ? (p.nameEN || p.nameTH || 'Unknown') : 'Item';
-    const em = p ? (p.emoji || '📦') : '📦';
-    const pr = p ? (p.price || 0) : 0;
-    return `<tr>
-      <td style="padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.05);color:var(--muted);font-size:13px">${idx+1}</td>
-      <td style="padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.05);font-size:13px;font-weight:600">${em} ${nm}</td>
-      <td style="padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.05);text-align:center;color:var(--teal);font-weight:700;font-size:13px">${qty}</td>
-      <td style="padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.05);text-align:right;color:var(--muted);font-size:13px">${pr.toLocaleString()}</td>
-      <td style="padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.05);text-align:right;color:var(--gold);font-weight:700;font-size:13px">${(pr*qty).toLocaleString()}</td>
-    </tr>`;
+  const box = o.box ? DHL_BOXES.find(b=>b.num===o.box) : null;
+  const rows = (o.items||[]).map(({product:p,qty},idx) => {
+    const nm = p?(p.nameEN||p.nameTH):'?';
+    const em = p?(p.emoji||''):'';
+    const pr = p?p.price:0;
+    return '<tr><td style="padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.05);color:var(--muted);font-size:13px">'+(idx+1)+'</td>'
+      +'<td style="padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.05);font-size:13px;font-weight:600">'+em+' '+nm+'</td>'
+      +'<td style="padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.05);text-align:center;color:var(--teal);font-weight:700;font-size:13px">'+qty+'</td>'
+      +'<td style="padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.05);text-align:right;color:var(--muted);font-size:13px">'+pr.toLocaleString()+'</td>'
+      +'<td style="padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.05);text-align:right;color:var(--gold);font-weight:700;font-size:13px">'+(pr*qty).toLocaleString()+'</td></tr>';
   }).join('');
 
   const ov = document.createElement('div');
   ov.id = 'orderDetailOverlay';
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(6px)';
   ov.onclick = e => { if(e.target===ov) closeOrderDetail(); };
-  
-  ov.innerHTML = `
-    <div style="background:var(--g2);border:1px solid var(--border);border-radius:20px;width:100%;max-width:620px;max-height:92vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,0.6)">
-      <div style="background:linear-gradient(135deg,var(--grad1),var(--grad2));padding:20px 24px;border-radius:20px 20px 0 0;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:1">
-        <div>
-          <div style="font-family:Playfair Display,serif;font-size:18px;color:var(--gold)">${o.num}</div>
-          <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px">${o.date}</div>
-        </div>
-        <div style="display:flex;gap:10px;align-items:center">
-          <span class="order-status status-${o.status}">${o.status.toUpperCase()}</span>
-          <button onclick="closeOrderDetail()" style="background:rgba(255,255,255,0.15);border:none;color:white;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:16px;font-weight:700">×</button>
-        </div>
-      </div>
-      <div style="padding:24px">
-        <div style="background:rgba(255,255,255,0.03);border-radius:12px;padding:16px;margin-bottom:20px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:4px">Customer</div><div style="font-size:14px;font-weight:700">${o.customer}</div></div>
-          <div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:4px">Phone</div><div style="font-size:14px;font-weight:700">${o.phone}</div></div>
-          ${o.country ? `<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:4px">Country</div><div style="font-size:14px;font-weight:700;color:var(--teal)">${o.country}</div></div>` : ''}
-          ${o.address ? `<div style="grid-column:1/-1"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:4px">Shipping Address</div><div style="font-size:13px;line-height:1.7;white-space:pre-wrap">${o.address}</div></div>` : ''}
-        </div>
-        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:10px">Order Items (${o.items.length})</div>
-        <table style="width:100%;border-collapse:collapse;margin-bottom:20px;background:rgba(255,255,255,0.02);border-radius:10px;overflow:hidden">
-          <thead><tr style="background:rgba(255,255,255,0.06)">
-            <th style="padding:9px 12px;font-size:10px;text-align:left;color:var(--muted);letter-spacing:1px">#</th>
-            <th style="padding:9px 12px;font-size:10px;text-align:left;color:var(--muted);letter-spacing:1px">Product</th>
-            <th style="padding:9px 12px;font-size:10px;text-align:center;color:var(--muted);letter-spacing:1px">Qty</th>
-            <th style="padding:9px 12px;font-size:10px;text-align:right;color:var(--muted);letter-spacing:1px">Price</th>
-            <th style="padding:9px 12px;font-size:10px;text-align:right;color:var(--muted);letter-spacing:1px">Total</th>
-          </tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-        <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px">
-          <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px"><span style="color:var(--muted)">Products Subtotal</span><span style="font-weight:600">${o.totalProduct.toLocaleString()}</span></div>
-          <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px"><span style="color:var(--muted)">Shipping Fee</span><span style="color:var(--teal);font-weight:600">${o.shipping.toLocaleString()}</span></div>
-          <div style="border-top:1px solid var(--border);margin-top:6px;padding-top:10px;display:flex;justify-content:space-between;font-size:18px;color:var(--gold);font-weight:700"><span>Grand Total</span><span>${o.total.toLocaleString()}</span></div>
-        </div>
-        <div style="display:flex;gap:8px">
-          <button onclick="closeOrderDetail()" style="flex:1;padding:12px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:10px;color:var(--muted);cursor:pointer;font-size:13px">Close Window</button>
-        </div>
-      </div>
-    </div>`;
+  ov.innerHTML =
+    '<div style="background:var(--g2);border:1px solid var(--border);border-radius:20px;width:100%;max-width:620px;max-height:92vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,0.6)">'
+      +'<div style="background:linear-gradient(135deg,var(--grad1),var(--grad2));padding:20px 24px;border-radius:20px 20px 0 0;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:1">'
+        +'<div><div style="font-family:Playfair Display,serif;font-size:18px;color:var(--gold)">'+o.num+'</div>'
+        +'<div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px">'+o.date+'</div></div>'
+        +'<div style="display:flex;gap:10px;align-items:center">'
+          +'<span class="order-status status-'+o.status+'">'+(o.status==='confirmed'?'Confirmed':'Pending')+'</span>'
+          +'<button onclick="closeOrderDetail()" style="background:rgba(255,255,255,0.15);border:none;color:white;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:16px;font-weight:700">X</button>'
+        +'</div>'
+      +'</div>'
+      +'<div style="padding:24px">'
+        +'<div style="background:rgba(255,255,255,0.03);border-radius:12px;padding:16px;margin-bottom:20px;display:grid;grid-template-columns:1fr 1fr;gap:12px">'
+          +'<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:4px">Customer</div><div style="font-size:14px;font-weight:700">'+o.customer+'</div></div>'
+          +'<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:4px">Phone</div><div style="font-size:14px;font-weight:700">'+o.phone+'</div></div>'
+          +(o.country?'<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:4px">Country</div><div style="font-size:14px;font-weight:700;color:var(--teal)">'+o.country+'</div></div>':'')
+          +(o.address?'<div style="grid-column:1/-1"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:4px">Shipping Address</div><div style="font-size:13px;line-height:1.7;white-space:pre-wrap">'+o.address+'</div></div>':'')
+        +'</div>'
+        +'<div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:10px">Order Items ('+(o.items?o.items.length:0)+')</div>'
+        +'<table style="width:100%;border-collapse:collapse;margin-bottom:20px;background:rgba(255,255,255,0.02);border-radius:10px;overflow:hidden">'
+          +'<thead><tr style="background:rgba(255,255,255,0.06)">'
+            +'<th style="padding:9px 12px;font-size:10px;text-align:left;color:var(--muted);letter-spacing:1px">#</th>'
+            +'<th style="padding:9px 12px;font-size:10px;text-align:left;color:var(--muted);letter-spacing:1px">Product</th>'
+            +'<th style="padding:9px 12px;font-size:10px;text-align:center;color:var(--muted);letter-spacing:1px">Qty</th>'
+            +'<th style="padding:9px 12px;font-size:10px;text-align:right;color:var(--muted);letter-spacing:1px">Price</th>'
+            +'<th style="padding:9px 12px;font-size:10px;text-align:right;color:var(--muted);letter-spacing:1px">Total</th>'
+          +'</tr></thead>'
+          +'<tbody>'+rows+'</tbody>'
+        +'</table>'
+        +(box?'<div style="background:rgba(0,180,216,0.08);border:1px solid rgba(0,180,216,0.25);border-radius:12px;padding:14px;margin-bottom:16px;font-size:13px">'
+          +'<div style="color:var(--teal);font-weight:700;margin-bottom:8px">DHL Box '+box.num+' ('+box.dims+' cm · Max '+box.maxKg+'kg)</div>'
+        +'</div>':'')
+        +'<div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px">'
+          +'<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px"><span style="color:var(--muted)">Products</span><span style="font-weight:600">'+o.totalProduct.toLocaleString()+'</span></div>'
+          +'<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px"><span style="color:var(--muted)">Shipping</span><span style="color:var(--teal);font-weight:600">'+o.shipping.toLocaleString()+'</span></div>'
+          +'<div style="border-top:1px solid var(--border);margin-top:6px;padding-top:10px;display:flex;justify-content:space-between;font-size:18px;color:var(--gold);font-weight:700"><span>Grand Total</span><span>'+o.total.toLocaleString()+'</span></div>'
+        +'</div>'
+        +'<div style="display:flex;gap:8px">'
+          +(o.status==='pending'?'<button onclick="confirmAdminOrder('+i+');renderAdminOrders();closeOrderDetail();" style="flex:1;padding:12px;background:var(--success);border:none;border-radius:10px;color:white;cursor:pointer;font-size:14px;font-weight:700;font-family:Nunito,sans-serif">Confirm Order</button>':'')
+          +'<button onclick="closeOrderDetail()" style="flex:1;padding:12px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:10px;color:var(--muted);cursor:pointer;font-size:13px">Close</button>'
+        +'</div>'
+      +'</div>'
+    +'</div>';
   document.body.appendChild(ov);
 }
-
-
+  
 </script>
 </body>
-</html>
+            </html>
