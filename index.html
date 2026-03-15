@@ -3625,9 +3625,44 @@ confirmAdminOrder = function(i) {
 async function loadOrdersFromSheet() {
   try {
     const resp = await fetch(scriptURL + '?type=orders');
-    // Not implemented yet - orders are append-only
-  } catch(e) {}
+    const data = await resp.json();
+    if (data && data.length > 0) {
+      // แปลงข้อมูลจาก Sheet กลับเป็นรูปแบบที่หน้าเว็บเข้าใจ
+      orders = data.map(o => ({
+        orderNum: o.orderNum,
+        date: o.date,
+        customer: {
+          name: o.name,
+          phone: o.phone,
+          country: o.country,
+          address: o.address
+        },
+        items: parseOrderItems(o.items), // ฟังก์ชันช่วยแยกรายการสินค้า
+        total: parseFloat(o.total) || 0,
+        shipping: parseFloat(o.shipping) || 0,
+        status: o.status || 'Pending'
+      }));
+      // สั่งให้วาดรายการออร์เดอร์ในหน้า Admin
+      if (typeof renderAdminOrders === 'function') renderAdminOrders();
+    }
+  } catch(e) {
+    console.error('โหลดออร์เดอร์ไม่สำเร็จ:', e);
+  }
 }
+
+// ฟังก์ชันช่วยแปลงข้อความสินค้า (เช่น "Soap x2, Boiled beans x1") กลับเป็น Array
+function parseOrderItems(itemsStr) {
+  if (!itemsStr) return [];
+  // หมายเหตุ: ตรงนี้เป็นการดึงชื่อมาโชว์เบื้องต้น เพราะใน Sheet เราเก็บเป็นข้อความรวม
+  return itemsStr.split(', ').map(item => {
+    const parts = item.split(' x');
+    return {
+      product: { nameEN: parts[0], emoji: '📦' },
+      qty: parseInt(parts[1]) || 1
+    };
+  });
+}
+
 
 // ─── STARTUP ───
 window.addEventListener('load', loadAllFromSheet);
