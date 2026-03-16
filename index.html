@@ -3746,6 +3746,11 @@ async function loadOrdersFromSheet() {
 // ─── STARTUP ───
 window.addEventListener('load', loadAllFromSheet);
 
+function closeOrderDetail() {
+  const el = document.getElementById('orderDetailOverlay');
+  if (el) el.remove();
+}
+
 function viewOrderDetail(i) {
   const o = orders[i];
   if (!o) return;
