@@ -3527,37 +3527,57 @@ function saveSettingsToSheet() {
   fetch(scriptURL, { method:'POST', mode:'no-cors', body: JSON.stringify({ type:'SaveSettings', settings }) });
 }
 
-// ─── SHIPPING RATES ───
+// ─── SHIPPING RATES (NEW SYNC SYSTEM) ───
 async function loadShippingFromSheet() {
   try {
     const resp = await fetch(scriptURL + '?type=shipping');
     const data = await resp.json();
-    if (!data || Object.keys(data).length === 0) return;
-    // data = { 2: { A:500, B:600, ... }, 3: { ... }, ... }
+    
+    if (!data || Object.keys(data).length === 0) {
+      console.warn("No shipping data found in Sheets");
+      return;
+    }
+
+    // ล้างข้อมูลเก่าในตัวแปรหน้าเว็บก่อนโหลดใหม่
+    ['A','B','C','D','E'].forEach(z => { zoneShippingRates[z] = {}; });
+
+    // Mapping ข้อมูลจาก JSON ลงสู่ตัวแปรระบบ
     Object.keys(data).forEach(boxNum => {
       const n = parseInt(boxNum);
-      if (zoneShippingRates) {
-        ['A','B','C','D','E'].forEach(z => {
-          if (!zoneShippingRates[z]) zoneShippingRates[z] = {};
-          zoneShippingRates[z][n] = data[boxNum][z] || 0;
-        });
-      }
+      ['A','B','C','D','E'].forEach(z => {
+        zoneShippingRates[z][n] = parseFloat(data[boxNum][z]) || 0;
+      });
     });
-    if (isAdminLoggedIn) renderShippingGrid();
-  } catch(e) { console.error('Shipping load failed:', e); }
+
+    console.log("✅ Shipping Sync Completed");
+    if (isAdminLoggedIn && typeof renderShippingGrid === 'function') renderShippingGrid();
+  } catch(e) { 
+    console.error('Shipping load failed:', e); 
+  }
 }
 
 function saveShippingToSheet() {
-  // Build rates object: { 2: {A:x, B:x, ...}, 3: {...}, ... }
   const rates = {};
+  // ตรวจสอบเบอร์กล่อง 2 ถึง 8 ตามโครงสร้าง DHL
   [2,3,4,5,6,7,8].forEach(n => {
     rates[n] = {};
     ['A','B','C','D','E'].forEach(z => {
       rates[n][z] = (zoneShippingRates[z]||{})[n] || 0;
     });
   });
-  fetch(scriptURL, { method:'POST', mode:'no-cors', body: JSON.stringify({ type:'SaveShipping', rates }) });
+
+  fetch(scriptURL, { 
+    method:'POST', 
+    mode:'no-cors', 
+    body: JSON.stringify({ type:'SaveShipping', rates }) 
+  }).then(() => {
+    showToast('💾 ค่าขนส่งถูกซิงค์ไปยัง Google Sheets แล้ว ✓');
+  }).catch(err => {
+    showToast('❌ การซิงค์ล้มเหลว');
+    console.error(err);
+  });
 }
+
 
 // ─── WRAP EXISTING FUNCTIONS ───
 const _origConfirmDL = confirmAndDownload;
