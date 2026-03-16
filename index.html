@@ -1644,8 +1644,7 @@ function changeAdminPassword() {
 
 function adminLogout() {
   isAdminLoggedIn = false;
-  showPage('landing');
-  showToast('Logged out');
+  loadAllFromSheet().then(() => { showPage('landing'); showToast('Logged out ✓'); });
 }
 
 function togglePassVisibility() {
@@ -1869,8 +1868,46 @@ function showPage(p) {
   const nav = document.getElementById('mainNav');
   nav.style.display = (p === 'landing' || p === 'admin-login' || p === 'closed') ? 'none' : 'flex';
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  if(p==='admin') { renderAdminProducts(); renderShippingGrid(); renderAdminOrders(); }
+  if(p==='admin') {
+    loadAllFromSheet().then(() => {
+      renderAdminProducts(); renderShippingGrid(); renderAdminOrders(); _fillAdminSettingsForm();
+    });
+  }
+  if(p==='shop')    { loadProductsFromSheet(); loadSettingsFromSheet(); loadShippingFromSheet(); }
+  if(p==='landing') { loadSettingsFromSheet(); }
   window.scrollTo(0,0);
+}
+
+// ── helpers ──
+function _applyShopToggleUI() {
+  const btn = document.getElementById('shopToggleBtn');
+  const lbl = document.getElementById('shopStatusLabel');
+  if (!btn || !lbl) return;
+  if (shopIsOpen) {
+    btn.textContent = '🔴 ปิดร้าน';
+    btn.style.background = 'rgba(231,76,60,0.2)'; btn.style.borderColor = 'var(--danger)'; btn.style.color = 'var(--danger)';
+    lbl.textContent = '🟢 ร้านเปิดอยู่ · Shop is OPEN'; lbl.style.color = 'var(--success)';
+  } else {
+    btn.textContent = '🟢 เปิดร้าน';
+    btn.style.background = 'rgba(46,204,113,0.2)'; btn.style.borderColor = 'var(--success)'; btn.style.color = 'var(--success)';
+    lbl.textContent = '🔴 ร้านปิดอยู่ · Shop is CLOSED'; lbl.style.color = 'var(--danger)';
+  }
+}
+
+function _fillAdminSettingsForm() {
+  const sn = document.getElementById('settingName');
+  const sl = document.getElementById('settingLine');
+  const sw = document.getElementById('settingWA');
+  if (sn) sn.value = shopSettings.name;
+  if (sl) sl.value = shopSettings.line;
+  if (sw) sw.value = shopSettings.wa;
+}
+
+function _updateContactBar() {
+  const lc = document.querySelector('.contact-chip[href*="line.me"]');
+  const wc = document.querySelector('.contact-chip[href*="wa.me"]');
+  if (lc && shopSettings.line) lc.href = 'https://line.me/ti/p/' + shopSettings.line;
+  if (wc && shopSettings.wa) { const n = shopSettings.wa.replace(/[^0-9]/g,''); wc.href = 'https://wa.me/' + n; }
 }
 
 function requireLogin() {
@@ -2358,19 +2395,35 @@ function closeOrderModal() {
 function confirmAndDownload() {
   const d = window._orderData;
   if(!d) return;
-  orders.push({ num:d.orderNum, customer:d.customer.name, phone:d.customer.phone,
-    country:d.customer.country||'', address:d.customer.address||'',
-    items:d.items, box:d.box?.num, totalProduct:d.totalProduct, shipping:d.shipping,
-    total:d.total, status:'confirmed', date:new Date().toLocaleDateString() });
 
-  // Generate and download PDF as printable HTML
+  // บันทึกลง orders array (status = pending รอ Admin ยืนยัน)
+  const newOrder = {
+    num:          d.orderNum,
+    customer:     d.customer.name,
+    phone:        d.customer.phone,
+    country:      d.customer.country  || '',
+    address:      d.customer.address  || '',
+    items:        d.items,
+    box:          d.box?.num,
+    totalProduct: d.totalProduct,
+    shipping:     d.shipping,
+    total:        d.total,
+    status:       'pending',
+    date:         new Date().toLocaleDateString()
+  };
+  orders.push(newOrder);
+
+  // บันทึกไป Google Sheets
+  saveOrderToSheet(d);
+
+  // ดาวน์โหลด Invoice PDF
   generateInvoicePDF(d);
 
   document.getElementById('omActions').innerHTML = `
     <div class="confirmed-dl-box">
       <div style="font-size:36px;margin-bottom:8px">✅</div>
       <div style="font-size:16px;font-weight:700;margin-bottom:4px">${lang==='th'?'ยืนยันออร์เดอร์แล้ว!':'Order Confirmed!'}</div>
-      <div style="font-size:13px;color:rgba(255,255,255,0.7);margin-bottom:12px">Order #${d.orderNum}</div>
+      <div style="font-size:13px;color:rgba(46,204,113,0.9);margin-bottom:12px">Order #${d.orderNum}</div>
       <div style="font-size:13px;margin-bottom:8px">${lang==='th'?'กรุณาส่งสลิปผ่าน:':'Please send payment slip via:'}</div>
       <div style="font-size:13px">💬 Line: <strong>@krthailandshop</strong></div>
       <div style="font-size:13px;margin-bottom:12px">📱 WhatsApp: <strong>+66638068809</strong></div>
@@ -2594,8 +2647,11 @@ function showAdminSection(s) {
   document.querySelectorAll('.admin-section').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.admin-tab').forEach(x=>x.classList.remove('active'));
   document.getElementById('admin-'+s).classList.add('active');
-  event.target.classList.add('active');
-  if(s==='orders') renderAdminOrders();
+  if(event && event.target) event.target.classList.add('active');
+  if(s==='orders')   loadOrdersFromSheet().then(()=>renderAdminOrders());
+  if(s==='products') loadProductsFromSheet().then(()=>renderAdminProducts());
+  if(s==='shipping') loadShippingFromSheet().then(()=>renderShippingGrid());
+  if(s==='settings') loadSettingsFromSheet().then(()=>_fillAdminSettingsForm());
 }
 
 function renderAdminProducts() {
@@ -2617,6 +2673,9 @@ function renderAdminProducts() {
   }).join('');
 }
 
+// ─── 1. ตัวแปรควบคุมหน้าสำหรับ ADMIN ORDERS ───
+let adminCurrentPage = 1;
+const adminPageSize = 10;  
 let activeShipZone = 'A';
 
 function renderShippingGrid() {
@@ -2672,32 +2731,83 @@ function saveShipping() {
   showToast('บันทึก '+DHL_ZONES[activeShipZone].name+' แล้ว ✓');
 }
 
-function renderAdminOrders() {
-  const el = document.getElementById('adminOrdersList');
-  if(!orders.length) { el.innerHTML=`<p style="color:var(--muted);text-align:center;padding:40px">No orders yet</p>`; return; }
-  el.innerHTML = orders.map((o,i) => `
-    <div class="order-admin-card">
-      <div class="order-admin-header">
-        <div>
-          <div style="font-weight:700">${o.num}</div>
-          <div style="font-size:12px;color:var(--muted)">${o.customer} · ${o.phone} · ${o.date}</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <span class="order-status status-${o.status}">${o.status==='confirmed'?'✓ Confirmed':'⏳ Pending'}</span>
-          <button onclick="viewOrderDetail(${i})" style="padding:6px 14px;background:rgba(0,180,216,0.15);border:1px solid var(--teal);color:var(--teal);border-radius:10px;cursor:pointer;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif">🔍 Details</button>
-          ${o.status==='pending'?`<button class="confirm-order-btn" onclick="confirmAdminOrder(${i})">Confirm</button>`:''}
-        </div>
-      </div>
-      <div style="font-size:13px">
-        Box ${o.box} · ${o.items.length} items · ฿${o.total.toLocaleString()} (Products: ฿${o.totalProduct.toLocaleString()} + Shipping: ฿${o.shipping.toLocaleString()})
-      </div>
-    </div>`).join('');
+// ============================================================
+// แก้ไข 1: loadAllFromSheet — เพิ่ม loadOrdersFromSheet()
+// ============================================================
+async function loadAllFromSheet() {
+  showLoadingOverlay(true);
+  try {
+    await Promise.all([
+      loadProductsFromSheet(),
+      loadSettingsFromSheet(),
+      loadShippingFromSheet(),
+      loadOrdersFromSheet(),
+    ]);
+  } catch(e) { console.error('loadAllFromSheet error:', e); }
+  showLoadingOverlay(false);
 }
 
+// ============================================================
+// แก้ไข 2: saveShippingToSheet — แก้ให้ส่ง rows แทน rates
+// ============================================================
+function saveShippingToSheet() {
+  const rows = [['Box','A','B','C','D','E']];
+  [2,3,4,5,6,7,8].forEach(n => {
+    rows.push([n, ...['A','B','C','D','E'].map(z => (zoneShippingRates[z]||{})[n] || 0)]);
+  });
+  fetch(scriptURL, { method:'POST', mode:'no-cors', body: JSON.stringify({ type:'SaveShipping', rows }) });
+}
+
+// ============================================================
+// แก้ไข 3: confirmAdminOrder — ส่ง UpdateOrderStatus ที่ถูกต้อง
+// ============================================================
 function confirmAdminOrder(i) {
   orders[i].status = 'confirmed';
   renderAdminOrders();
   showToast('Order confirmed ✓');
+  const o = orders[i];
+  if (o) fetch(scriptURL, { method:'POST', mode:'no-cors', 
+    body: JSON.stringify({ type:'UpdateOrderStatus', orderNum: o.num, status:'confirmed' }) 
+  });
+}
+
+// ============================================================
+// แก้ไข 4: renderAdminOrders (version เดียว ถูกต้อง)
+// ลบ version เดิม (บรรทัด 2753-2773) ออก แล้วใช้อันนี้แทน
+// ============================================================
+function renderAdminOrders() {
+  const container = document.getElementById('adminOrdersList');
+  if (!container) return;
+  if (!orders.length) {
+    container.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px">No orders yet</p>';
+    return;
+  }
+  const sortedOrders = [...orders].reverse();
+  container.innerHTML = sortedOrders.map((o, ri) => {
+    const actualIdx = orders.findIndex(x => x.num === o.num);
+    // ✅ รองรับทั้ง customer เป็น string และเป็น object
+    const customerName = typeof o.customer === 'object' ? o.customer.name : (o.customer || '-');
+    const customerPhone = typeof o.customer === 'object' ? o.customer.phone : (o.phone || '-');
+    const statusClass = (o.status || 'pending').toLowerCase();
+    return `
+      <div class="order-admin-card">
+        <div class="order-admin-header">
+          <div>
+            <div style="font-weight:700">${o.num}</div>
+            <div style="font-size:12px;color:var(--muted)">${customerName} · ${customerPhone} · ${o.date}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="order-status status-${statusClass}">${statusClass==='confirmed'?'✓ Confirmed':'⏳ Pending'}</span>
+            <button onclick="viewOrderDetail(${actualIdx})" style="padding:6px 14px;background:rgba(0,180,216,0.15);border:1px solid var(--teal);color:var(--teal);border-radius:10px;cursor:pointer;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif">🔍 Details</button>
+            ${statusClass==='pending'?`<button class="confirm-order-btn" onclick="confirmAdminOrder(${actualIdx})">Confirm</button>`:''}
+          </div>
+        </div>
+        <div style="font-size:13px">
+          ${o.box?'Box '+o.box+' · ':''}${(o.items||[]).length} items · ฿${(o.total||0).toLocaleString()}
+          (Products: ฿${(o.totalProduct||0).toLocaleString()} + Shipping: ฿${(o.shipping||0).toLocaleString()})
+        </div>
+      </div>`;
+  }).join('');
 }
 
 // ===== PRODUCT MODAL =====
@@ -2731,57 +2841,60 @@ function openProductModal(id=null) {
 }
 function closeProductModal() { document.getElementById('productModal').classList.remove('open'); resetImageUpload(); }
 
-// ===== IMAGE UPLOAD WITH AUTO-RESIZE =====
-let currentImageData = null;
+// ===== IMAGE UPLOAD — Google Drive =====
+let currentImageData = null;   // base64 ชั่วคราวก่อนอัปโหลด
+let currentImageURL  = null;   // Drive URL หลังอัปโหลดสำเร็จ
 
-// ฟังก์ชันหลักในการย่อขนาดรูปภาพ
 function processAndResizeImage(file) {
   const reader = new FileReader();
   reader.onload = function(e) {
     const img = new Image();
     img.onload = function() {
-      // --- ตั้งค่ามาตรฐานการย่อรูป ---
-      const MAX_WIDTH = 800;  // กว้างสูงสุด 800px
-      const MAX_HEIGHT = 800; // สูงสูงสุด 800px
-      let width = img.width;
-      let height = img.height;
-
-      // คำนวณสัดส่วนรูปภาพ (Aspect Ratio)
-      if (width > height) {
-        if (width > MAX_WIDTH) {
-          height *= MAX_WIDTH / width;
-          width = MAX_WIDTH;
-        }
-      } else {
-        if (height > MAX_HEIGHT) {
-          width *= MAX_HEIGHT / height;
-          height = MAX_HEIGHT;
-        }
-      }
-
-      // สร้าง Canvas เพื่อวาดรูปใหม่
+      const MAX = 800;
+      let w = img.width, h = img.height;
+      if (w > h) { if (w > MAX) { h *= MAX/w; w = MAX; } }
+      else       { if (h > MAX) { w *= MAX/h; h = MAX; } }
       const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, width, height);
-
-      // บีบอัดเป็นไฟล์ JPEG คุณภาพ 0.7 (70%) เพื่อให้ขนาดไฟล์เล็กแต่ยังชัดเจน
-      currentImageData = canvas.toDataURL('image/jpeg', 0.7);
-      
-      // แสดงตัวอย่างรูปภาพ
-      showImagePreview(currentImageData, file.name);
-      console.log("✅ ย่อรูปสำเร็จ! ขนาดใหม่ประมาณ:", Math.round(currentImageData.length / 1024), "KB");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const base64 = canvas.toDataURL('image/jpeg', 0.7);
+      // แสดง preview ชั่วคราวด้วย base64 ก่อน
+      currentImageData = base64;
+      currentImageURL  = null;
+      showImagePreview(base64, file.name);
+      document.getElementById('imageFileName').textContent = '⏳ กำลังอัปโหลดไป Google Drive...';
+      // อัปโหลดไป Drive ผ่าน Apps Script
+      uploadImageToDrive(base64, file.name);
     };
     img.src = e.target.result;
   };
   reader.readAsDataURL(file);
 }
 
+async function uploadImageToDrive(base64Data, fileName) {
+  try {
+    const resp = await fetch(scriptURL, {
+      method: 'POST',
+      body: JSON.stringify({ type: 'UploadImage', imageData: base64Data, fileName: fileName })
+    });
+    const result = await resp.json();
+    if (result && result.url) {
+      currentImageURL  = result.url;
+      currentImageData = null;
+      document.getElementById('imageFileName').textContent = '✅ อัปโหลด Drive สำเร็จ';
+      document.getElementById('previewImg').src = currentImageURL;
+    } else {
+      document.getElementById('imageFileName').textContent = '❌ อัปโหลดไม่สำเร็จ ลองใหม่';
+    }
+  } catch(err) {
+    console.error('Drive upload error:', err);
+    document.getElementById('imageFileName').textContent = '❌ อัปโหลดไม่สำเร็จ';
+  }
+}
+
 function handleImageUpload(input) {
   const file = input.files[0];
   if(!file) return;
-  // ส่งไปเข้ากระบวนการย่อรูปทันที (รองรับไฟล์ใหญ่ได้เลย)
   processAndResizeImage(file);
 }
 
@@ -2790,7 +2903,6 @@ function handleImageDrop(e) {
   document.getElementById('imageDropZone').style.borderColor = 'var(--border)';
   const file = e.dataTransfer.files[0];
   if(!file || !file.type.startsWith('image/')) { showToast('กรุณาเลือกไฟล์รูปภาพเท่านั้น'); return; }
-  // ส่งไปเข้ากระบวนการย่อรูป
   processAndResizeImage(file);
 }
 
@@ -2803,7 +2915,7 @@ function showImagePreview(dataUrl, name) {
 
 function clearImage(e) {
   e.stopPropagation();
-  currentImageData = null;
+  currentImageData = null; currentImageURL = null;
   document.getElementById('imagePreviewWrap').style.display = 'block';
   document.getElementById('imagePreviewImg').style.display = 'none';
   document.getElementById('p-image').value = '';
@@ -2811,7 +2923,7 @@ function clearImage(e) {
 }
 
 function resetImageUpload() {
-  currentImageData = null;
+  currentImageData = null; currentImageURL = null;
   document.getElementById('imagePreviewWrap').style.display = 'block';
   document.getElementById('imagePreviewImg').style.display = 'none';
   document.getElementById('p-image').value = '';
@@ -2857,10 +2969,13 @@ function saveProduct() {
 }
 
 
+// ============================================================
+// แก้ไข 5: deleteProduct — ลบ duplicate call ออก
+// ============================================================
 function deleteProduct(id) {
   if(!confirm(lang==='th'?'ยืนยันลบสินค้า?':'Delete this product?')) return;
   products = products.filter(p=>p.id!==id);
-  if (typeof deleteProductFromSheet === 'function') deleteProductFromSheet(id);
+  deleteProductFromSheet(id); // ✅ เรียกแค่ครั้งเดียว
   delete cart[id];
   renderAdminProducts();
   renderProducts();
@@ -3407,15 +3522,22 @@ applyLangTexts('en');
 updateRateDisplay();
 
 // GOOGLE SHEETS INTEGRATION v2 — Full Persistence
-const scriptURL = 'https://script.google.com/macros/s/AKfycbxV-2TJgp85InhJANaRrZCAShZk3uumKhdODncruvDCqQQnOPnlN8W4g347cRnInOTp/exec';
+const scriptURL = 'https://script.google.com/macros/s/AKfycbxPRfsp2CE5PPEmKwMjtjMiFBL_nFU10rnVb6G9vtb2iXSdBnsfcvtngPkUu2XfyKyb/exec';
 
-// ─── LOAD ALL DATA ON STARTUP ───
-async function loadAllFromSheet() {
-  await Promise.all([
-    loadProductsFromSheet(),
-    loadSettingsFromSheet(),
-    loadShippingFromSheet()
-  ]);
+// ─── LOADING OVERLAY ───
+function showLoadingOverlay(show) {
+  let el = document.getElementById('loadingOverlay');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'loadingOverlay';
+    el.style.cssText = 'position:fixed;inset:0;background:rgba(255,255,255,0.92);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-family:Nunito,sans-serif';
+    el.innerHTML = '<div style="font-size:36px;animation:spin 1s linear infinite;color:var(--accent)">⟳</div><div style="font-size:14px;color:var(--muted);font-weight:600">กำลังโหลดข้อมูล...</div>';
+    const s = document.createElement('style');
+    s.textContent = '@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}';
+    document.head.appendChild(s);
+    document.body.appendChild(el);
+  }
+  el.style.display = show ? 'flex' : 'none';
 }
 
 // ─── PRODUCTS ───
@@ -3454,13 +3576,25 @@ async function loadProductsFromSheet() {
 }
 
 async function saveOrderToSheet(d) {
-  fetch(scriptURL, { method:'POST', mode:'no-cors', body: JSON.stringify({
-    type:'Orders', orderNum:d.orderNum,
-    name:d.customer.name, phone:d.customer.phone,
-    country:d.customer.country||'', address:d.customer.address||'',
-    items:d.items.map(i=>(i.product.nameEN||i.product.nameTH)+' x'+i.qty).join(', '),
-    total:d.total, shipping:d.shipping
-  })});
+  try {
+    await fetch(scriptURL, {
+      method: 'POST',
+      mode:   'no-cors',
+      body:   JSON.stringify({
+        type:      'Orders',
+        orderNum:  d.orderNum,
+        name:      d.customer.name,
+        phone:     d.customer.phone,
+        country:   d.customer.country  || '',
+        address:   d.customer.address  || '',
+        items:     d.items.map(i => (i.product.nameEN || i.product.nameTH) + ' x' + i.qty).join(', '),
+        total:     d.total,
+        shipping:  d.shipping,
+      })
+    });
+  } catch(e) {
+    console.error('saveOrderToSheet failed:', e);
+  }
 }
 
 async function updateProductToSheet(p) {
@@ -3476,40 +3610,27 @@ async function deleteProductFromSheet(id) {
 // ─── SETTINGS ───
 async function loadSettingsFromSheet() {
   try {
-    const resp = await fetch(scriptURL + '?type=settings');
+    const resp = await fetch(scriptURL + '?type=settings&t=' + Date.now());
     const data = await resp.json();
     if (!data || Object.keys(data).length === 0) return;
-    // Apply settings
-    if (data.shopName) { shopSettings.name = data.shopName; document.getElementById('navBrand').textContent = data.shopName; }
+    if (data.shopName) {
+      shopSettings.name = data.shopName;
+      document.getElementById('navBrand').textContent = data.shopName;
+      const hl = document.getElementById('heroLogo');
+      if (hl) hl.textContent = data.shopName.split(' ')[0] || 'K&R';
+    }
     if (data.shopLine) shopSettings.line = data.shopLine;
     if (data.shopWA)   shopSettings.wa   = data.shopWA;
     if (data.usdRate)  { usdRate = parseFloat(data.usdRate); updateRateDisplay(); }
     if (data.shopIsOpen !== undefined) {
       shopIsOpen = data.shopIsOpen === 'true' || data.shopIsOpen === true;
-      // Update toggle button UI
-      const btn = document.getElementById('shopToggleBtn');
-      const lbl = document.getElementById('shopStatusLabel');
-      if (btn && lbl) {
-        if (shopIsOpen) {
-          btn.textContent = '🔴 ปิดร้าน'; btn.style.background='rgba(231,76,60,0.2)';
-          btn.style.borderColor='var(--danger)'; btn.style.color='var(--danger)';
-          lbl.textContent='🟢 ร้านเปิดอยู่ · Shop is OPEN'; lbl.style.color='var(--success)';
-        } else {
-          btn.textContent='🟢 เปิดร้าน'; btn.style.background='rgba(46,204,113,0.2)';
-          btn.style.borderColor='var(--success)'; btn.style.color='var(--success)';
-          lbl.textContent='🔴 ร้านปิดอยู่ · Shop is CLOSED'; lbl.style.color='var(--danger)';
-        }
-      }
+      _applyShopToggleUI();
     }
-    // Update settings form fields if admin is viewing
-    if (document.getElementById('settingName')) {
-      document.getElementById('settingName').value = shopSettings.name;
-      document.getElementById('settingLine').value = shopSettings.line;
-      document.getElementById('settingWA').value = shopSettings.wa;
-    }
-    if (data.grad1) { document.documentElement.style.setProperty('--grad1', data.grad1); document.getElementById('color1').value = data.grad1; }
-    if (data.grad2) { document.documentElement.style.setProperty('--grad2', data.grad2); document.getElementById('color2').value = data.grad2; }
-    if (data.accent) { document.documentElement.style.setProperty('--accent', data.accent); document.getElementById('color3').value = data.accent; }
+    _fillAdminSettingsForm();
+    _updateContactBar();
+    if (data.grad1)  { document.documentElement.style.setProperty('--grad1',  data.grad1);  const e=document.getElementById('color1'); if(e) e.value=data.grad1; }
+    if (data.grad2)  { document.documentElement.style.setProperty('--grad2',  data.grad2);  const e=document.getElementById('color2'); if(e) e.value=data.grad2; }
+    if (data.accent) { document.documentElement.style.setProperty('--accent', data.accent); const e=document.getElementById('color3'); if(e) e.value=data.accent; }
   } catch(e) { console.error('Settings load failed:', e); }
 }
 
@@ -3527,63 +3648,30 @@ function saveSettingsToSheet() {
   fetch(scriptURL, { method:'POST', mode:'no-cors', body: JSON.stringify({ type:'SaveSettings', settings }) });
 }
 
-// ─── SHIPPING RATES (NEW SYNC SYSTEM) ───
+// ─── SHIPPING RATES ───
 async function loadShippingFromSheet() {
   try {
     const resp = await fetch(scriptURL + '?type=shipping');
     const data = await resp.json();
-    
-    if (!data || Object.keys(data).length === 0) {
-      console.warn("No shipping data found in Sheets");
-      return;
-    }
-
-    // ล้างข้อมูลเก่าในตัวแปรหน้าเว็บก่อนโหลดใหม่
-    ['A','B','C','D','E'].forEach(z => { zoneShippingRates[z] = {}; });
-
-    // Mapping ข้อมูลจาก JSON ลงสู่ตัวแปรระบบ
+    if (!data || Object.keys(data).length === 0) return;
+    // data = { 2: { A:500, B:600, ... }, 3: { ... }, ... }
     Object.keys(data).forEach(boxNum => {
       const n = parseInt(boxNum);
-      ['A','B','C','D','E'].forEach(z => {
-        zoneShippingRates[z][n] = parseFloat(data[boxNum][z]) || 0;
-      });
+      if (zoneShippingRates) {
+        ['A','B','C','D','E'].forEach(z => {
+          if (!zoneShippingRates[z]) zoneShippingRates[z] = {};
+          zoneShippingRates[z][n] = data[boxNum][z] || 0;
+        });
+      }
     });
-
-    console.log("✅ Shipping Sync Completed");
-    if (isAdminLoggedIn && typeof renderShippingGrid === 'function') renderShippingGrid();
-  } catch(e) { 
-    console.error('Shipping load failed:', e); 
-  }
+    if (isAdminLoggedIn) renderShippingGrid();
+  } catch(e) { console.error('Shipping load failed:', e); }
 }
-
-function saveShippingToSheet() {
-  const rates = {};
-  // ตรวจสอบเบอร์กล่อง 2 ถึง 8 ตามโครงสร้าง DHL
-  [2,3,4,5,6,7,8].forEach(n => {
-    rates[n] = {};
-    ['A','B','C','D','E'].forEach(z => {
-      rates[n][z] = (zoneShippingRates[z]||{})[n] || 0;
-    });
-  });
-
-  fetch(scriptURL, { 
-    method:'POST', 
-    mode:'no-cors', 
-    body: JSON.stringify({ type:'SaveShipping', rates }) 
-  }).then(() => {
-    showToast('💾 ค่าขนส่งถูกซิงค์ไปยัง Google Sheets แล้ว ✓');
-  }).catch(err => {
-    showToast('❌ การซิงค์ล้มเหลว');
-    console.error(err);
-  });
-}
-
 
 // ─── WRAP EXISTING FUNCTIONS ───
+// (saveOrderToSheet ถูกเรียกใน confirmAndDownload แล้ว ไม่ต้อง wrap ซ้ำ)
 const _origConfirmDL = confirmAndDownload;
 confirmAndDownload = function() {
-  const d = window._orderData;
-  if (d) saveOrderToSheet(d);
   _origConfirmDL();
 };
 
@@ -3595,12 +3683,6 @@ saveProduct = async function() {
     const p = id ? products.find(x=>x.id===id) : products[products.length-1];
     if(p) updateProductToSheet(p);
   }, 100);
-};
-
-const _origDeleteProd = deleteProduct;
-deleteProduct = function(id) {
-  deleteProductFromSheet(id);
-  _origDeleteProd(id);
 };
 
 const _origSaveSettings = saveSettings;
@@ -3634,35 +3716,26 @@ saveUsdRate = function() {
   saveSettingsToSheet();
 };
 
-const _origConfirmAdminOrder = confirmAdminOrder;
-confirmAdminOrder = function(i) {
-  _origConfirmAdminOrder(i);
-  const o = orders[i];
-  if (o) fetch(scriptURL, { method:'POST', mode:'no-cors', body: JSON.stringify({ type:'ConfirmOrder', orderNum: o.num }) });
-};
-
 // ─── LOAD ORDERS FROM SHEET ───
 async function loadOrdersFromSheet() {
   try {
-    const resp = await fetch(scriptURL + '?type=orders');
+    const resp = await fetch(scriptURL + '?type=orders&t=' + Date.now());
     const data = await resp.json();
     if (data && data.length > 0) {
-      // แปลงข้อมูลจาก Sheet กลับเป็นรูปแบบที่หน้าเว็บเข้าใจ
       orders = data.map(o => ({
-        orderNum: o.orderNum,
-        date: o.date,
-        customer: {
-          name: o.name,
-          phone: o.phone,
-          country: o.country,
-          address: o.address
-        },
-        items: parseOrderItems(o.items), // ฟังก์ชันช่วยแยกรายการสินค้า
-        total: parseFloat(o.total) || 0,
-        shipping: parseFloat(o.shipping) || 0,
-        status: o.status || 'Pending'
+        num:          o.OrderNum   || o.orderNum   || '',
+        date:         o.Date       || o.date       || '',
+        customer:     o.Name       || o.name       || '-',
+        phone:        o.Phone      || o.phone      || '-',
+        country:      o.Country    || o.country    || '',
+        address:      o.Address    || o.address    || '',
+        items:        parseOrderItems(o.Items || o.items),
+        total:        parseFloat(o.Total    || o.total)    || 0,
+        totalProduct: parseFloat(o.Total    || o.total)    || 0,
+        shipping:     parseFloat(o.Shipping || o.shipping) || 0,
+        box:          null,
+        status:       (o.Status || o.status || 'pending').toLowerCase()
       }));
-      // สั่งให้วาดรายการออร์เดอร์ในหน้า Admin
       if (typeof renderAdminOrders === 'function') renderAdminOrders();
     }
   } catch(e) {
@@ -3670,91 +3743,81 @@ async function loadOrdersFromSheet() {
   }
 }
 
-// ฟังก์ชันช่วยแปลงข้อความสินค้า (เช่น "Soap x2, Boiled beans x1") กลับเป็น Array
-function parseOrderItems(itemsStr) {
-  if (!itemsStr) return [];
-  // หมายเหตุ: ตรงนี้เป็นการดึงชื่อมาโชว์เบื้องต้น เพราะใน Sheet เราเก็บเป็นข้อความรวม
-  return itemsStr.split(', ').map(item => {
-    const parts = item.split(' x');
-    return {
-      product: { nameEN: parts[0], emoji: '📦' },
-      qty: parseInt(parts[1]) || 1
-    };
-  });
-}
-
-
 // ─── STARTUP ───
 window.addEventListener('load', loadAllFromSheet);
 
-// Admin Order Detail Popup
-function closeOrderDetail() {
-  const el = document.getElementById('orderDetailOverlay');
-  if(el) el.remove();
-}
 function viewOrderDetail(i) {
   const o = orders[i];
+  if (!o) return;
+  // รองรับทั้ง customer เป็น string (จาก Sheets) และ object (จาก local)
+  const customerName    = typeof o.customer === 'object' ? o.customer.name    : (o.customer || '-');
+  const customerPhone   = typeof o.customer === 'object' ? o.customer.phone   : (o.phone    || '-');
+  const customerCountry = typeof o.customer === 'object' ? o.customer.country : (o.country  || '');
+  const customerAddress = typeof o.customer === 'object' ? o.customer.address : (o.address  || '');
+
   const box = o.box ? DHL_BOXES.find(b=>b.num===o.box) : null;
   const rows = (o.items||[]).map(({product:p,qty},idx) => {
     const nm = p?(p.nameEN||p.nameTH):'?';
     const em = p?(p.emoji||''):'';
-    const pr = p?p.price:0;
-    return '<tr><td style="padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.05);color:var(--muted);font-size:13px">'+(idx+1)+'</td>'
-      +'<td style="padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.05);font-size:13px;font-weight:600">'+em+' '+nm+'</td>'
-      +'<td style="padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.05);text-align:center;color:var(--teal);font-weight:700;font-size:13px">'+qty+'</td>'
-      +'<td style="padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.05);text-align:right;color:var(--muted);font-size:13px">'+pr.toLocaleString()+'</td>'
-      +'<td style="padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.05);text-align:right;color:var(--gold);font-weight:700;font-size:13px">'+(pr*qty).toLocaleString()+'</td></tr>';
+    const pr = p?(p.price||0):0;
+    return '<tr>'
+      +'<td style="padding:9px 12px;border-bottom:1px solid rgba(214,51,132,0.08);color:var(--muted);font-size:13px">'+(idx+1)+'</td>'
+      +'<td style="padding:9px 12px;border-bottom:1px solid rgba(214,51,132,0.08);font-size:13px;font-weight:600">'+em+' '+nm+'</td>'
+      +'<td style="padding:9px 12px;border-bottom:1px solid rgba(214,51,132,0.08);text-align:center;color:var(--teal);font-weight:700;font-size:13px">'+qty+'</td>'
+      +'<td style="padding:9px 12px;border-bottom:1px solid rgba(214,51,132,0.08);text-align:right;color:var(--muted);font-size:13px">'+pr.toLocaleString()+'</td>'
+      +'<td style="padding:9px 12px;border-bottom:1px solid rgba(214,51,132,0.08);text-align:right;color:var(--gold);font-weight:700;font-size:13px">'+(pr*qty).toLocaleString()+'</td>'
+      +'</tr>';
   }).join('');
 
   const ov = document.createElement('div');
   ov.id = 'orderDetailOverlay';
-  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(6px)';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(6px)';
   ov.onclick = e => { if(e.target===ov) closeOrderDetail(); };
   ov.innerHTML =
-    '<div style="background:var(--g2);border:1px solid var(--border);border-radius:20px;width:100%;max-width:620px;max-height:92vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,0.6)">'
+    '<div style="background:white;border:1px solid var(--border);border-radius:20px;width:100%;max-width:620px;max-height:92vh;overflow-y:auto;box-shadow:0 24px 80px rgba(214,51,132,0.2)">'
       +'<div style="background:linear-gradient(135deg,var(--grad1),var(--grad2));padding:20px 24px;border-radius:20px 20px 0 0;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:1">'
         +'<div><div style="font-family:Playfair Display,serif;font-size:18px;color:var(--gold)">'+o.num+'</div>'
         +'<div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px">'+o.date+'</div></div>'
         +'<div style="display:flex;gap:10px;align-items:center">'
-          +'<span class="order-status status-'+o.status+'">'+(o.status==='confirmed'?'Confirmed':'Pending')+'</span>'
-          +'<button onclick="closeOrderDetail()" style="background:rgba(255,255,255,0.15);border:none;color:white;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:16px;font-weight:700">X</button>'
+          +'<span class="order-status status-'+o.status+'">'+(o.status==='confirmed'?'✓ Confirmed':'⏳ Pending')+'</span>'
+          +'<button onclick="closeOrderDetail()" style="background:rgba(255,255,255,0.15);border:none;color:white;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:16px;font-weight:700">✕</button>'
         +'</div>'
       +'</div>'
       +'<div style="padding:24px">'
-        +'<div style="background:rgba(255,255,255,0.03);border-radius:12px;padding:16px;margin-bottom:20px;display:grid;grid-template-columns:1fr 1fr;gap:12px">'
-          +'<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:4px">Customer</div><div style="font-size:14px;font-weight:700">'+o.customer+'</div></div>'
-          +'<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:4px">Phone</div><div style="font-size:14px;font-weight:700">'+o.phone+'</div></div>'
-          +(o.country?'<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:4px">Country</div><div style="font-size:14px;font-weight:700;color:var(--teal)">'+o.country+'</div></div>':'')
-          +(o.address?'<div style="grid-column:1/-1"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:4px">Shipping Address</div><div style="font-size:13px;line-height:1.7;white-space:pre-wrap">'+o.address+'</div></div>':'')
+        +'<div style="background:#fff8fc;border-radius:12px;padding:16px;margin-bottom:20px;display:grid;grid-template-columns:1fr 1fr;gap:12px;border:1px solid #f0e0f0">'
+          +'<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:4px">Customer</div><div style="font-size:14px;font-weight:700;color:#1a1a2e">'+customerName+'</div></div>'
+          +'<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:4px">Phone</div><div style="font-size:14px;font-weight:700;color:#1a1a2e">'+customerPhone+'</div></div>'
+          +(customerCountry?'<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:4px">Country</div><div style="font-size:14px;font-weight:700;color:var(--teal)">'+customerCountry+'</div></div>':'')
+          +(customerAddress?'<div style="grid-column:1/-1"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:4px">Shipping Address</div><div style="font-size:13px;line-height:1.7;white-space:pre-wrap;color:#1a1a2e">'+customerAddress+'</div></div>':'')
         +'</div>'
         +'<div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:10px">Order Items ('+(o.items?o.items.length:0)+')</div>'
-        +'<table style="width:100%;border-collapse:collapse;margin-bottom:20px;background:rgba(255,255,255,0.02);border-radius:10px;overflow:hidden">'
-          +'<thead><tr style="background:rgba(255,255,255,0.06)">'
-            +'<th style="padding:9px 12px;font-size:10px;text-align:left;color:var(--muted);letter-spacing:1px">#</th>'
-            +'<th style="padding:9px 12px;font-size:10px;text-align:left;color:var(--muted);letter-spacing:1px">Product</th>'
-            +'<th style="padding:9px 12px;font-size:10px;text-align:center;color:var(--muted);letter-spacing:1px">Qty</th>'
-            +'<th style="padding:9px 12px;font-size:10px;text-align:right;color:var(--muted);letter-spacing:1px">Price</th>'
-            +'<th style="padding:9px 12px;font-size:10px;text-align:right;color:var(--muted);letter-spacing:1px">Total</th>'
+        +'<table style="width:100%;border-collapse:collapse;margin-bottom:20px;border-radius:10px;overflow:hidden;border:1px solid #f0e0f0">'
+          +'<thead><tr style="background:#fff0f7">'
+            +'<th style="padding:9px 12px;font-size:10px;text-align:left;color:var(--muted)">#</th>'
+            +'<th style="padding:9px 12px;font-size:10px;text-align:left;color:var(--muted)">Product</th>'
+            +'<th style="padding:9px 12px;font-size:10px;text-align:center;color:var(--muted)">Qty</th>'
+            +'<th style="padding:9px 12px;font-size:10px;text-align:right;color:var(--muted)">Price</th>'
+            +'<th style="padding:9px 12px;font-size:10px;text-align:right;color:var(--muted)">Total</th>'
           +'</tr></thead>'
           +'<tbody>'+rows+'</tbody>'
         +'</table>'
-        +(box?'<div style="background:rgba(0,180,216,0.08);border:1px solid rgba(0,180,216,0.25);border-radius:12px;padding:14px;margin-bottom:16px;font-size:13px">'
-          +'<div style="color:var(--teal);font-weight:700;margin-bottom:8px">DHL Box '+box.num+' ('+box.dims+' cm · Max '+box.maxKg+'kg)</div>'
+        +(box?'<div style="background:rgba(173,20,87,0.06);border:1px solid rgba(173,20,87,0.2);border-radius:12px;padding:14px;margin-bottom:16px;font-size:13px">'
+          +'<div style="color:var(--teal);font-weight:700">DHL Box '+box.num+' ('+box.dims+' cm · Max '+box.maxKg+'kg)</div>'
         +'</div>':'')
-        +'<div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px">'
-          +'<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px"><span style="color:var(--muted)">Products</span><span style="font-weight:600">'+o.totalProduct.toLocaleString()+'</span></div>'
-          +'<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px"><span style="color:var(--muted)">Shipping</span><span style="color:var(--teal);font-weight:600">'+o.shipping.toLocaleString()+'</span></div>'
-          +'<div style="border-top:1px solid var(--border);margin-top:6px;padding-top:10px;display:flex;justify-content:space-between;font-size:18px;color:var(--gold);font-weight:700"><span>Grand Total</span><span>'+o.total.toLocaleString()+'</span></div>'
+        +'<div style="background:#fff8fc;border:1.5px solid #f0e0f0;border-radius:12px;padding:16px;margin-bottom:16px">'
+          +'<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px"><span style="color:var(--muted)">Products</span><span style="font-weight:600">฿'+(o.totalProduct||0).toLocaleString()+'</span></div>'
+          +'<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px"><span style="color:var(--muted)">Shipping</span><span style="color:var(--teal);font-weight:600">฿'+(o.shipping||0).toLocaleString()+'</span></div>'
+          +'<div style="border-top:1px solid var(--border);margin-top:6px;padding-top:10px;display:flex;justify-content:space-between;font-size:18px;color:var(--gold);font-weight:700"><span>Grand Total</span><span>฿'+(o.total||0).toLocaleString()+'</span></div>'
         +'</div>'
         +'<div style="display:flex;gap:8px">'
-          +(o.status==='pending'?'<button onclick="confirmAdminOrder('+i+');renderAdminOrders();closeOrderDetail();" style="flex:1;padding:12px;background:var(--success);border:none;border-radius:10px;color:white;cursor:pointer;font-size:14px;font-weight:700;font-family:Nunito,sans-serif">Confirm Order</button>':'')
-          +'<button onclick="closeOrderDetail()" style="flex:1;padding:12px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:10px;color:var(--muted);cursor:pointer;font-size:13px">Close</button>'
+          +(o.status==='pending'?'<button onclick="confirmAdminOrder('+i+');renderAdminOrders();closeOrderDetail();" style="flex:1;padding:12px;background:var(--success);border:none;border-radius:10px;color:white;cursor:pointer;font-size:14px;font-weight:700;font-family:Nunito,sans-serif">✓ Confirm Order</button>':'')
+          +'<button onclick="closeOrderDetail()" style="flex:1;padding:12px;background:#f5f0f5;border:1px solid var(--border);border-radius:10px;color:var(--muted);cursor:pointer;font-size:13px;font-family:Nunito,sans-serif">Close</button>'
         +'</div>'
       +'</div>'
     +'</div>';
   document.body.appendChild(ov);
 }
-  
+
 </script>
 </body>
             </html>
