@@ -3761,32 +3761,36 @@ function openInvoiceModal(i) {
 
   const el = document.createElement('div');
   el.id = 'invoiceModal';
-  el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9500;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(6px);overflow-y:auto';
+  el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9500;overflow-y:auto;backdrop-filter:blur(6px);-webkit-overflow-scrolling:touch';
   el.innerHTML = `
-    <div style="background:white;border-radius:20px;width:100%;max-width:680px;max-height:94vh;overflow-y:auto;box-shadow:0 24px 80px rgba(214,51,132,0.2)">
-      <div style="background:linear-gradient(135deg,var(--grad1),var(--grad2));padding:20px 24px;border-radius:20px 20px 0 0;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:1">
+    <div style="background:white;border-radius:0;width:100%;min-height:100vh;box-shadow:none;box-sizing:border-box">
+      <div style="background:linear-gradient(135deg,var(--grad1),var(--grad2));padding:18px 20px;border-radius:20px 20px 0 0;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:1">
         <div>
           <div style="font-family:'Playfair Display',serif;font-size:18px;color:var(--gold)">🧾 Create Invoice</div>
           <div style="font-size:12px;color:rgba(255,255,255,0.7);margin-top:2px">${o.num}</div>
         </div>
-        <button onclick="closeInvoiceModal()" style="background:rgba(255,255,255,0.15);border:none;color:white;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:16px;font-weight:700">✕</button>
+        <button onclick="closeInvoiceModal()" style="background:rgba(255,255,255,0.15);border:none;color:white;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:16px;font-weight:700;flex-shrink:0">✕</button>
       </div>
-      <div style="padding:24px;display:flex;flex-direction:column;gap:16px">
+      <div style="padding:16px;display:flex;flex-direction:column;gap:14px">
 
         <!-- Customer Info -->
-        <div style="background:#fff8fc;border:1px solid var(--border);border-radius:12px;padding:16px">
+        <div style="background:#fff8fc;border:1px solid var(--border);border-radius:12px;padding:14px">
           <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:12px">Customer Information</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <div><label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">Name</label>
-              <input id="inv-cname" type="text" value="${customerName}" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:13px;outline:none"></div>
-            <div><label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">Phone</label>
-              <input id="inv-cphone" type="text" value="${customerPhone}" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:13px;outline:none"></div>
-            <div><label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">Country</label>
-              <input id="inv-ccountry" type="text" value="${o.country||''}" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:13px;outline:none"></div>
-            <div><label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">Invoice Date</label>
-              <input id="inv-date" type="date" value="${new Date().toISOString().split('T')[0]}" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:13px;outline:none"></div>
-            <div style="grid-column:1/-1"><label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">Shipping Address</label>
-              <input id="inv-caddr" type="text" value="${o.address||''}" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:13px;outline:none"></div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div><label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">Name</label>
+                <input id="inv-cname" type="text" value="${customerName}" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:13px;outline:none;box-sizing:border-box"></div>
+              <div><label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">Phone</label>
+                <input id="inv-cphone" type="text" value="${customerPhone}" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:13px;outline:none;box-sizing:border-box"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div><label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">Country</label>
+                <input id="inv-ccountry" type="text" value="${o.country||''}" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:13px;outline:none;box-sizing:border-box"></div>
+              <div><label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">Invoice Date</label>
+                <input id="inv-date" type="date" value="${new Date().toISOString().split('T')[0]}" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:13px;outline:none;box-sizing:border-box"></div>
+            </div>
+            <div><label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">Shipping Address</label>
+              <input id="inv-caddr" type="text" value="${o.address||''}" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:13px;outline:none;box-sizing:border-box"></div>
           </div>
         </div>
 
@@ -3810,19 +3814,19 @@ function openInvoiceModal(i) {
         <!-- Discounts -->
         <div style="background:#fff8fc;border:1px solid var(--border);border-radius:12px;padding:16px">
           <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:12px">Discounts</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <div><label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">Product Discount</label>
-              <div style="display:flex;gap:6px">
-                <input id="inv-disc-prod" type="number" min="0" value="0" style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:13px;outline:none" oninput="recalcInvoice()">
-                <select id="inv-disc-prod-type" style="padding:8px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:13px;outline:none;background:white" onchange="recalcInvoice()">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div><label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">🛍 Product Discount</label>
+              <div style="display:flex;gap:8px;align-items:center">
+                <input id="inv-disc-prod" type="number" min="0" value="0" style="flex:1;min-width:0;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:14px;outline:none" oninput="recalcInvoice()">
+                <select id="inv-disc-prod-type" style="width:70px;padding:10px 8px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:14px;outline:none;background:white;flex-shrink:0" onchange="recalcInvoice()">
                   <option value="thb">฿</option><option value="pct">%</option>
                 </select>
               </div>
             </div>
-            <div><label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">Shipping Discount</label>
-              <div style="display:flex;gap:6px">
-                <input id="inv-disc-ship" type="number" min="0" value="0" style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:13px;outline:none" oninput="recalcInvoice()">
-                <select id="inv-disc-ship-type" style="padding:8px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:13px;outline:none;background:white" onchange="recalcInvoice()">
+            <div><label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">🚚 Shipping Discount</label>
+              <div style="display:flex;gap:8px;align-items:center">
+                <input id="inv-disc-ship" type="number" min="0" value="0" style="flex:1;min-width:0;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:14px;outline:none" oninput="recalcInvoice()">
+                <select id="inv-disc-ship-type" style="width:70px;padding:10px 8px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:14px;outline:none;background:white;flex-shrink:0" onchange="recalcInvoice()">
                   <option value="thb">฿</option><option value="pct">%</option>
                 </select>
               </div>
@@ -3833,18 +3837,18 @@ function openInvoiceModal(i) {
         <!-- Shipping & USD Rate -->
         <div style="background:#fff8fc;border:1px solid var(--border);border-radius:12px;padding:16px">
           <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:12px">Shipping & Currency</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:12px">
             <div><label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">Shipping Fee (฿)</label>
-              <input id="inv-shipping" type="number" min="0" value="${o.shipping||0}" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:13px;outline:none" oninput="recalcInvoice()"></div>
+              <input id="inv-shipping" type="number" min="0" value="${o.shipping||0}" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:14px;outline:none;box-sizing:border-box" oninput="recalcInvoice()"></div>
             <div><label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">USD Rate (฿ per $1)</label>
-              <input id="inv-usdrate" type="number" min="1" value="${usdRate||35.5}" step="0.01" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:13px;outline:none" oninput="recalcInvoice()"></div>
+              <input id="inv-usdrate" type="number" min="1" value="${usdRate||35.5}" step="0.01" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:14px;outline:none;box-sizing:border-box" oninput="recalcInvoice()"></div>
           </div>
         </div>
 
         <!-- Note -->
         <div>
           <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:1px">Note / Remark</label>
-          <textarea id="inv-note" rows="2" placeholder="e.g. Payment due within 3 days. Thank you!" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:13px;outline:none;resize:vertical"></textarea>
+          <textarea id="inv-note" rows="2" placeholder="e.g. Payment due within 3 days. Thank you!" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:13px;outline:none;resize:vertical;box-sizing:border-box"></textarea>
         </div>
 
         <!-- Summary -->
@@ -3854,13 +3858,7 @@ function openInvoiceModal(i) {
         </div>
 
         <!-- Signature placeholder -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div style="border:2px dashed #e0d0e0;border-radius:12px;padding:20px;text-align:center;font-size:12px;color:#ccc">
-            Authorized Signature<br><span style="font-size:10px">(Sign after printing)</span>
-          </div>
-          <div style="border:2px dashed #e0d0e0;border-radius:12px;padding:20px;text-align:center;font-size:12px;color:#ccc">
-            Company Stamp<br><span style="font-size:10px">(Stamp after printing)</span>
-          </div>
+        <!-- (removed for mobile space) -->
         </div>
 
         <!-- Actions -->
