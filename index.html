@@ -3721,27 +3721,36 @@ async function loadOrdersFromSheet() {
   try {
     const resp = await fetch(scriptURL + '?type=orders&t=' + Date.now());
     const data = await resp.json();
-    if (data && data.length > 0) {
-      orders = data.map(o => ({
-        // รองรับ header ทั้งตัวใหญ่ตัวเล็ก และชื่อภาษาไทย/อังกฤษ
-        num:          o.OrderNum   || o.orderNum   || o.order_num  || '',
-        date:         o.Date       || o.date       || '',
-        customer:     o.Name       || o.name       || '-',
-        phone:        o.Phone      || o.phone      || '-',
-        country:      o.Country    || o.country    || '',
-        address:      o.Address    || o.address    || '',
-        items:        parseOrderItems(o.Items || o.items),
-        total:        parseFloat(o.Total    || o.total)    || 0,
-        totalProduct: parseFloat(o.Total    || o.total)    || 0,
-        shipping:     parseFloat(o.Shipping || o.shipping) || 0,
-        box:          null,
-        // รองรับ status ทั้งภาษาไทยและอังกฤษ
-        status: _normalizeStatus(o.Status || o.status || 'pending'),
-      }));
-      // กรองออเดอร์ที่มีเลขออเดอร์เท่านั้น
-      orders = orders.filter(o => o.num);
+
+    if (!Array.isArray(data) || data.length === 0) {
+      orders = [];
       if (typeof renderAdminOrders === 'function') renderAdminOrders();
+      return;
     }
+
+    orders = data
+      .filter(o => o && (o.orderNum || o.OrderNum)) // กรองเฉพาะแถวที่มีเลขออเดอร์
+      .map(o => {
+        // Sheets header เป็น lowercase: date, orderNum, name, phone, items, total, status, country, address, shipping
+        const rawStatus = (o.status || o.Status || 'pending').toString().trim();
+        return {
+          num:          o.orderNum  || o.OrderNum  || '',
+          date:         o.date      || o.Date      || '',
+          customer:     o.name      || o.Name      || '-',
+          phone:        o.phone     || o.Phone     || '-',
+          country:      o.country   || o.Country   || '',
+          address:      o.address   || o.Address   || '',
+          items:        parseOrderItems(o.items    || o.Items),
+          total:        parseFloat(o.total    || o.Total)    || 0,
+          totalProduct: parseFloat(o.total    || o.Total)    || 0,
+          shipping:     parseFloat(o.shipping || o.Shipping) || 0,
+          box:          null,
+          status:       _normalizeStatus(rawStatus),
+        };
+      });
+
+    if (typeof renderAdminOrders === 'function') renderAdminOrders();
+
   } catch(e) {
     console.error('โหลดออร์เดอร์ไม่สำเร็จ:', e);
   }
@@ -3750,10 +3759,9 @@ async function loadOrdersFromSheet() {
 function _normalizeStatus(s) {
   if (!s) return 'pending';
   const str = s.toString().toLowerCase().trim();
-  // รองรับสถานะภาษาไทย
   if (str === 'รอยืนยัน' || str === 'pending' || str === 'รอ') return 'pending';
   if (str === 'ยืนยันแล้ว' || str === 'confirmed' || str === 'confirm') return 'confirmed';
-  return str;
+  return 'pending'; // default
 }
 
 // ─── STARTUP ───
