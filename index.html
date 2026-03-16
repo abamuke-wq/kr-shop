@@ -3885,6 +3885,8 @@ function closeInvoiceModal() {
   const el = document.getElementById('invoiceModal');
   if (el) el.remove();
   _invoiceOrderIdx = null;
+  // reload orders จาก Sheets แล้ว render ใหม่
+  loadOrdersFromSheet().then(() => renderAdminOrders());
 }
 
 function recalcInvoice() {
