@@ -3522,7 +3522,7 @@ applyLangTexts('en');
 updateRateDisplay();
 
 // GOOGLE SHEETS INTEGRATION v2 — Full Persistence
-const scriptURL = 'https://script.google.com/macros/s/AKfycbxPRfsp2CE5PPEmKwMjtjMiFBL_nFU10rnVb6G9vtb2iXSdBnsfcvtngPkUu2XfyKyb/exec';
+const scriptURL = 'https://script.google.com/macros/s/AKfycbyLuCa_QS59aRdwi3GQ6EuomVLIiDV8qv_Q0Sdnb8xnrArtXEBPB-wbAh4-L85cc11m/exec';
 
 // ─── LOADING OVERLAY ───
 function showLoadingOverlay(show) {
@@ -3723,7 +3723,8 @@ async function loadOrdersFromSheet() {
     const data = await resp.json();
     if (data && data.length > 0) {
       orders = data.map(o => ({
-        num:          o.OrderNum   || o.orderNum   || '',
+        // รองรับ header ทั้งตัวใหญ่ตัวเล็ก และชื่อภาษาไทย/อังกฤษ
+        num:          o.OrderNum   || o.orderNum   || o.order_num  || '',
         date:         o.Date       || o.date       || '',
         customer:     o.Name       || o.name       || '-',
         phone:        o.Phone      || o.phone      || '-',
@@ -3734,13 +3735,25 @@ async function loadOrdersFromSheet() {
         totalProduct: parseFloat(o.Total    || o.total)    || 0,
         shipping:     parseFloat(o.Shipping || o.shipping) || 0,
         box:          null,
-        status:       (o.Status || o.status || 'pending').toLowerCase()
+        // รองรับ status ทั้งภาษาไทยและอังกฤษ
+        status: _normalizeStatus(o.Status || o.status || 'pending'),
       }));
+      // กรองออเดอร์ที่มีเลขออเดอร์เท่านั้น
+      orders = orders.filter(o => o.num);
       if (typeof renderAdminOrders === 'function') renderAdminOrders();
     }
   } catch(e) {
     console.error('โหลดออร์เดอร์ไม่สำเร็จ:', e);
   }
+}
+
+function _normalizeStatus(s) {
+  if (!s) return 'pending';
+  const str = s.toString().toLowerCase().trim();
+  // รองรับสถานะภาษาไทย
+  if (str === 'รอยืนยัน' || str === 'pending' || str === 'รอ') return 'pending';
+  if (str === 'ยืนยันแล้ว' || str === 'confirmed' || str === 'confirm') return 'confirmed';
+  return str;
 }
 
 // ─── STARTUP ───
