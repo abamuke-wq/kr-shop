@@ -2685,18 +2685,30 @@ function deleteAdminOrder(i) {
 }
 
 function confirmAdminOrder(i) {
-  orders[i].status = 'confirmed';
-  _updateOrdersBadge();
-  renderAdminOrders();
-  showToast('Order confirmed ✓');
   const o = orders[i];
-  if (o) fetch(scriptURL, { method:'POST', mode:'no-cors',
+  if (!o) return;
+  fetch(scriptURL, {
+    method:   'POST',
+    redirect: 'follow',
+    headers:  { 'Content-Type': 'text/plain' },
     body: JSON.stringify({
       type:          'UpdateOrderStatus',
       orderNum:      o.num,
       status:        'confirmed',
       confirmedDate: new Date().toLocaleDateString(),
     })
+  })
+  .then(r => r.text())
+  .then(result => {
+    console.log('confirmAdminOrder:', result);
+    orders[i].status = 'confirmed';
+    _updateOrdersBadge();
+    renderAdminOrders();
+    showToast('✓ Order confirmed');
+  })
+  .catch(e => {
+    console.error('confirmAdminOrder failed:', e);
+    showToast('Confirm failed');
   });
 }
 
@@ -3501,7 +3513,7 @@ applyLangTexts('en');
 updateRateDisplay();
 
 // GOOGLE SHEETS INTEGRATION v2 — Full Persistence
-const scriptURL = 'https://script.google.com/macros/s/AKfycbzqEIfG_N6N6tEdO10UFSuJOqo7JxDpWRV0iM7ZiRRAU-yNSCGHttpuAhhDkX0F2R28/exec';
+const scriptURL = 'https://script.google.com/macros/s/AKfycbwx6B-0E2Ix4C4ZkIWxcX7RiTcAM_HWugrBIseA-nOjq0FcAHY0nLj_dfApR63Iear6/exec';
 
 // ─── LOADING OVERLAY ───
 function showLoadingOverlay(show) {
