@@ -3060,6 +3060,8 @@ function saveShipping() {
 // ============================================================
 async function loadAllFromSheet() {
   showLoadingOverlay(true);
+  // timeout 10 วิ ถ้าโหลดไม่เสร็จให้ปิด overlay เอง
+  const timeout = setTimeout(() => showLoadingOverlay(false), 10000);
   try {
     await Promise.all([
       loadProductsFromSheet(),
@@ -3067,8 +3069,12 @@ async function loadAllFromSheet() {
       loadShippingFromSheet(),
       loadOrdersFromSheet(),
     ]);
-  } catch(e) { console.error('loadAllFromSheet error:', e); }
-  showLoadingOverlay(false);
+  } catch(e) {
+    console.error('loadAllFromSheet error:', e);
+  } finally {
+    clearTimeout(timeout);
+    showLoadingOverlay(false);
+  }
 }
 
 // ============================================================
@@ -4003,7 +4009,7 @@ applyLangTexts('en');
 updateRateDisplay();
 
 // GOOGLE SHEETS INTEGRATION v2 — Full Persistence
-const scriptURL = 'https://script.google.com/macros/s/AKfycbwNt-poMfv3-svvZPT6inFcMwNESLFE-rNtejTyoFgNzCcvJGYj3s44_wsKXV2lCyIT/exec';
+const scriptURL = 'https://script.google.com/macros/s/AKfycbxqJq7-8LybMcQ90h6cBhlgyQ7C9r12OREQIX6EHtZgKlGqS2sI4nMNug95mQCBqLzP/exec';
 
 // ─── LOADING OVERLAY ───
 function showLoadingOverlay(show) {
@@ -4012,7 +4018,8 @@ function showLoadingOverlay(show) {
     el = document.createElement('div');
     el.id = 'loadingOverlay';
     el.style.cssText = 'position:fixed;inset:0;background:rgba(255,255,255,0.92);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-family:Nunito,sans-serif';
-    el.innerHTML = '<div style="font-size:36px;animation:spin 1s linear infinite;color:var(--accent)">⟳</div><div style="font-size:14px;color:var(--muted);font-weight:600">กำลังโหลดข้อมูล...</div>';
+    el.innerHTML = '<div style="font-size:36px;animation:spin 1s linear infinite;color:var(--accent)">⟳</div><div style="font-size:14px;color:var(--muted);font-weight:600">กำลังโหลดข้อมูล...</div><div style="font-size:11px;color:#ccc;margin-top:4px">กดเพื่อข้ามการโหลด</div>';
+    el.onclick = () => { el.style.display = 'none'; };
     const s = document.createElement('style');
     s.textContent = '@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}';
     document.head.appendChild(s);
@@ -4983,6 +4990,7 @@ function aibSelectBox(boxNum, zone, rate, btn) {
 }
 
 
+function closeAIB() {
   const el = document.getElementById('aibModal');
   if (el) el.remove();
   _aibItems = [];
