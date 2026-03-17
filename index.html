@@ -907,18 +907,19 @@ body { font-family:'Nunito',sans-serif; background:var(--g1); color:#1a1a2e; min
   <div style="min-height:100vh; background:linear-gradient(135deg, var(--g1), var(--g3)); display:flex; align-items:center; justify-content:center; padding:20px;">
     <div class="login-card">
       <div class="login-logo">K&R</div>
-      <div class="login-sub" data-th="กรอกชื่อและเบอร์โทรเพื่อสั่งซื้อ" data-en="Enter your name & phone to continue">Enter your name & phone to continue</div>
+      <div class="login-sub" data-th="กรอกรหัสและเบอร์โทรเพื่อสั่งซื้อ" data-en="Enter your code & phone to continue">Enter your code & phone to continue</div>
       <div class="form-group">
-        <label class="form-label" data-th="ชื่อ-นามสกุล" data-en="Full Name">Full Name</label>
-        <input type="text" id="loginName" class="form-input" data-ph-th="ชื่อ-นามสกุล" data-ph-en="Your full name" placeholder="Your full name">
+        <label class="form-label" data-th="รหัสลูกค้า" data-en="Customer Code">Customer Code</label>
+        <input type="text" id="loginCode" class="form-input" placeholder="e.g. KHONG01" style="text-transform:uppercase;letter-spacing:2px;font-weight:700">
       </div>
       <div class="form-group">
         <label class="form-label" data-th="เบอร์โทรศัพท์" data-en="Phone Number">Phone Number</label>
         <input type="tel" id="loginPhone" class="form-input" placeholder="+66 xxx xxx xxxx">
       </div>
-      <button class="submit-btn" onclick="doLogin()">
+      <button class="submit-btn" id="loginBtn" onclick="doLogin()">
         <span data-th="เข้าสู่ระบบ" data-en="Continue to Shop">Continue to Shop</span>
       </button>
+      <div id="loginError" style="display:none;color:var(--danger);font-size:13px;text-align:center;margin-top:8px;padding:8px;background:#fff0f0;border-radius:8px"></div>
       <div class="back-link" onclick="showPage('landing')">← <span data-th="กลับหน้าแรก" data-en="Back to home">Back to home</span></div>
     </div>
   </div>
@@ -1163,6 +1164,7 @@ body { font-family:'Nunito',sans-serif; background:var(--g1); color:#1a1a2e; min
         Orders
         <span id="ordersBadge" style="display:none;position:absolute;top:-6px;right:-6px;background:#e74c3c;color:white;border-radius:50%;width:18px;height:18px;font-size:11px;font-weight:700;line-height:18px;text-align:center;font-family:'Nunito',sans-serif"></span>
       </button>
+      <button class="admin-tab" onclick="showAdminSection('customers',this)" data-th="ลูกค้า" data-en="Customers">👥 Customers</button>
       <button class="admin-tab" onclick="showAdminSection('settings',this)" data-th="ตั้งค่าร้าน" data-en="Shop Settings">Shop Settings</button>
     </div>
 
@@ -1211,6 +1213,35 @@ body { font-family:'Nunito',sans-serif; background:var(--g1); color:#1a1a2e; min
     </div>
 
     <!-- Settings Section -->
+    <!-- Customers Section -->
+    <div id="admin-customers" class="admin-section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+        <h2 style="font-family:'Playfair Display',serif;color:var(--accent)">👥 Customers</h2>
+        <div style="display:flex;gap:8px">
+          <button onclick="openAdminInvoiceBuilder()" style="padding:8px 14px;background:linear-gradient(135deg,#1a7a4a,#27ae60);border:none;color:white;border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;font-family:'Nunito',sans-serif">🧾 Create Invoice</button>
+          <button onclick="openCustomerModal(null)" style="padding:8px 14px;background:linear-gradient(135deg,var(--accent),var(--grad2));border:none;color:white;border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;font-family:'Nunito',sans-serif">+ Add Customer</button>
+        </div>
+      </div>
+      <!-- Search -->
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px;position:relative">
+          <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:16px">🔍</span>
+          <input id="custSearchName" type="text" placeholder="Search by name..."
+            oninput="renderCustomersList()"
+            style="width:100%;padding:10px 12px 10px 38px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:13px;outline:none;box-sizing:border-box">
+        </div>
+        <div style="flex:1;min-width:160px;position:relative">
+          <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:16px">🔑</span>
+          <input id="custSearchCode" type="text" placeholder="Customer Code..."
+            oninput="onSearchCustomerCode(this.value)"
+            style="width:100%;padding:10px 12px 10px 38px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:13px;text-transform:uppercase;letter-spacing:1px;outline:none;box-sizing:border-box">
+        </div>
+      </div>
+      <!-- Code search result badge -->
+      <div id="custCodeResult" style="display:none;background:linear-gradient(135deg,#e8f5e9,#f1f8e9);border:1px solid #a5d6a7;border-radius:10px;padding:12px 16px;margin-bottom:12px;font-size:13px"></div>
+      <div id="customersList"></div>
+    </div>
+
     <div id="admin-settings" class="admin-section">
       <div class="admin-header">
         <div class="admin-title" data-th="ตั้งค่าร้าน" data-en="Shop Settings">Shop Settings</div>
@@ -1388,9 +1419,17 @@ body { font-family:'Nunito',sans-serif; background:var(--g1); color:#1a1a2e; min
       <div class="form-group"><label class="form-label" data-th="ชื่อ (อังกฤษ)" data-en="Name (EN)">Name (EN)</label><input type="text" id="p-nameEN" class="form-input"></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label class="form-label" data-th="ราคา (฿)" data-en="Price (฿)">Price (฿)</label><input type="number" id="p-price" class="form-input"></div>
-      <div class="form-group"><label class="form-label" data-th="น้ำหนัก (g)" data-en="Weight (g)">Weight (g)</label><input type="number" id="p-weight" class="form-input"></div>
+      <div class="form-group"><label class="form-label" data-th="ราคาขาย (฿)" data-en="Selling Price (฿)">Selling Price (฿)</label><input type="number" id="p-price" class="form-input"></div>
+      <div class="form-group">
+        <label class="form-label" style="display:flex;align-items:center;gap:6px">
+          <span data-th="ต้นทุน (฿)" data-en="Cost Price (฿)">Cost Price (฿)</span>
+          <span style="font-size:10px;background:#fff3e0;color:#e65100;padding:1px 6px;border-radius:10px;font-weight:700">Admin only</span>
+        </label>
+        <input type="number" id="p-cost" class="form-input" placeholder="0">
+      </div>
     </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label" data-th="น้ำหนัก (g)" data-en="Weight (g)">Weight (g)</label><input type="number" id="p-weight" class="form-input"></div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px" data-th="ขนาดสินค้า (เซนติเมตร)" data-en="Product Dimensions (cm)">Dimensions (cm)</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
       <div class="form-group"><label class="form-label" data-th="กว้าง" data-en="Width">Width</label><input type="number" id="p-w" class="form-input" placeholder="cm"></div>
@@ -1934,18 +1973,60 @@ function requireLogin() {
 }
 function logout() { currentUser=null; showPage('landing'); }
 
-function doLogin() {
-  const name = document.getElementById('loginName').value.trim();
-  const phone = document.getElementById('loginPhone').value.trim();
-  if(!name || !phone) { showToast('Please fill in all fields'); return; }
-  currentUser = { name, phone, country:'', address:'' };
-  document.getElementById('userBadge').textContent = name;
-  cart = {};
-  renderProducts();
-  renderCart();
-  showPage('shop');
-  updateAddressBadge();
-  showToast(`Welcome, ${name}! 👋`);
+async function doLogin() {
+  const code  = (document.getElementById('loginCode').value || '').trim().toUpperCase();
+  const phone = (document.getElementById('loginPhone').value || '').trim();
+  const errEl = document.getElementById('loginError');
+  const btn   = document.getElementById('loginBtn');
+
+  if (!code || !phone) {
+    errEl.style.display = 'block';
+    errEl.textContent = 'Please fill in all fields';
+    return;
+  }
+
+  errEl.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Checking...';
+
+  try {
+    const phoneClean = phone.replace(/\D/g,'');
+    const resp = await fetch(`${scriptURL}?type=getCustomer&code=${encodeURIComponent(code)}&phone=${encodeURIComponent(phoneClean)}&t=${Date.now()}`);
+    const data = await resp.json();
+
+    if (!data.found) {
+      errEl.style.display = 'block';
+      errEl.textContent = 'Invalid code or phone number. Please check and try again.';
+      btn.disabled = false;
+      btn.textContent = 'Continue to Shop';
+      return;
+    }
+
+    // login สำเร็จ — เก็บข้อมูลลูกค้าและราคาพิเศษ
+    currentUser = {
+      name:          data.name,
+      phone:         data.phone,
+      customerCode:  data.customerCode,
+      discount:      data.discount || 0,       // % ส่วนลดทุกชิ้น
+      priceOverride: data.priceOverride || {},  // {ชื่อสินค้า: ราคา}
+      country:       '',
+      address:       '',
+    };
+
+    document.getElementById('userBadge').textContent = data.name;
+    cart = {};
+    renderProducts();
+    renderCart();
+    showPage('shop');
+    updateAddressBadge();
+    showToast(`Welcome, ${data.name}! 👋`);
+
+  } catch(e) {
+    errEl.style.display = 'block';
+    errEl.textContent = 'Connection error. Please try again.';
+    btn.disabled = false;
+    btn.textContent = 'Continue to Shop';
+  }
 }
 
 // ===== SEARCH =====
@@ -2037,6 +2118,263 @@ function fmtPriceDetail(thbAmount) {
 }
 
 
+// ================================================================
+// CUSTOMER MANAGEMENT
+// ================================================================
+let customers = [];
+
+async function loadCustomersFromSheet() {
+  try {
+    const resp = await fetch(scriptURL + '?type=customers&t=' + Date.now());
+    customers = await resp.json();
+    if (!Array.isArray(customers)) customers = [];
+  } catch(e) {
+    console.error('Load customers failed:', e);
+    customers = [];
+  }
+}
+
+function renderCustomersList() {
+  const container = document.getElementById('customersList');
+  if (!container) return;
+
+  const nameQ = (document.getElementById('custSearchName')?.value || '').toLowerCase().trim();
+  const codeQ  = (document.getElementById('custSearchCode')?.value || '').toUpperCase().trim();
+
+  let filtered = customers;
+  if (nameQ) filtered = filtered.filter(c =>
+    c.name.toLowerCase().includes(nameQ) || c.phone.includes(nameQ)
+  );
+  if (codeQ && !nameQ) filtered = filtered.filter(c => c.customerCode.includes(codeQ));
+
+  if (!filtered.length) {
+    container.innerHTML = `<p style="color:var(--muted);text-align:center;padding:40px">${nameQ||codeQ ? 'No customers found' : 'No customers yet.'}</p>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(c => {
+    const i = customers.findIndex(x => x.customerCode === c.customerCode);
+    const hasOverride = Object.keys(c.priceOverride||{}).length > 0;
+    const overrideText = hasOverride ? Object.entries(c.priceOverride).map(([k,v])=>`${k}: ฿${v}`).join(', ') : '';
+    return `
+      <div style="background:white;border:1px solid #f0e0f0;border-radius:12px;padding:16px;margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+          <div>
+            <div style="font-size:16px;font-weight:700;color:var(--accent);letter-spacing:1px">${c.customerCode}</div>
+            <div style="font-size:14px;font-weight:600;margin-top:2px">${c.name}</div>
+            <div style="font-size:13px;color:#666;margin-top:2px">📱 ${c.phone}</div>
+            ${c.discount>0?`<div style="font-size:12px;color:#e65100;margin-top:4px">🏷 Discount: ${c.discount}% off all items</div>`:''}
+            ${hasOverride?`<div style="font-size:12px;color:#0070c0;margin-top:4px">💲 ${overrideText}</div>`:''}
+            ${c.note?`<div style="font-size:12px;color:var(--muted);margin-top:4px">📝 ${c.note}</div>`:''}
+          </div>
+          <div style="display:flex;gap:8px">
+            <button onclick="openCustomerModal(${i})" style="padding:6px 14px;background:#f5f0ff;border:1px solid var(--teal);color:var(--teal);border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif">✏️ Edit</button>
+            <button onclick="deleteCustomer('${c.customerCode}')" style="padding:6px 12px;background:#fff0f0;border:1px solid #ffcccc;color:#c62828;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif">🗑</button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function onSearchCustomerCode(val) {
+  const code = val.toUpperCase().trim();
+  const resultEl = document.getElementById('custCodeResult');
+  if (!code) { resultEl.style.display='none'; renderCustomersList(); return; }
+
+  const exact   = customers.find(c => c.customerCode === code);
+  const partial = customers.filter(c => c.customerCode.startsWith(code) && c.customerCode !== code);
+
+  if (exact) {
+    const idx = customers.findIndex(c => c.customerCode === code);
+    const hasOverride = Object.keys(exact.priceOverride||{}).length > 0;
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div>
+          <span style="font-size:11px;color:#2e7d32;font-weight:700;text-transform:uppercase;letter-spacing:1px">✅ Customer Found</span>
+          <div style="font-size:16px;font-weight:700;color:var(--accent);margin-top:2px">${exact.customerCode} — ${exact.name}</div>
+          <div style="font-size:13px;color:#555">📱 ${exact.phone}${exact.discount>0?' · 🏷 '+exact.discount+'% discount':''}${hasOverride?' · 💲 Custom prices':''}</div>
+          ${exact.note?`<div style="font-size:12px;color:var(--muted)">📝 ${exact.note}</div>`:''}
+        </div>
+        <button onclick="openCustomerModal(${idx})" style="padding:8px 14px;background:linear-gradient(135deg,var(--accent),var(--grad2));border:none;color:white;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif">✏️ Edit</button>
+      </div>`;
+  } else if (partial.length) {
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = `<span style="font-size:12px;color:#555;margin-right:6px">Suggestions:</span>` +
+      partial.map(c=>`<span style="display:inline-block;margin:2px;padding:3px 10px;background:white;border:1px solid var(--border);border-radius:20px;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer" onclick="document.getElementById('custSearchCode').value='${c.customerCode}';onSearchCustomerCode('${c.customerCode}')">${c.customerCode} — ${c.name}</span>`).join('');
+  } else {
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = `<span style="color:#c62828;font-size:13px">❌ No customer with code "${code}"</span>`;
+  }
+  renderCustomersList();
+}
+
+function openCustomerModal(idx) {
+  const c = (idx !== null && idx !== undefined && idx !== '') ? customers[idx] : null;
+  const isEdit = c !== null;
+  const overrideEntries = c ? Object.entries(c.priceOverride||{}) : [];
+  const overrideRowsHTML = overrideEntries.map(([k,v]) => `
+    <div class="po-row" style="display:flex;gap:8px;margin-bottom:8px">
+      <input type="text" class="po-name" value="${k}" placeholder="Product name (EN)"
+        style="flex:2;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:13px;outline:none">
+      <input type="number" class="po-price" value="${v}" placeholder="Price ฿" min="0"
+        style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:13px;outline:none">
+      <button onclick="this.parentElement.remove()"
+        style="padding:8px;background:#fff0f0;border:1px solid #ffcccc;color:#c62828;border-radius:8px;cursor:pointer">✕</button>
+    </div>`).join('');
+
+  const el = document.createElement('div');
+  el.id = 'customerModal';
+  el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9500;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;backdrop-filter:blur(6px);padding:0';
+  el.innerHTML = `
+    <div style="background:white;border-radius:0 0 20px 20px;width:100%;max-width:560px;box-sizing:border-box">
+      <div style="background:linear-gradient(135deg,var(--grad1),var(--grad2));padding:18px 20px;border-radius:20px 20px 0 0;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:1">
+        <div style="font-family:'Playfair Display',serif;font-size:18px;color:var(--gold)">${isEdit?'✏️ Edit Customer':'➕ Add Customer'}</div>
+        <button onclick="closeCustomerModal()" style="background:rgba(255,255,255,0.15);border:none;color:white;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:16px;font-weight:700">✕</button>
+      </div>
+      <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase">Customer Code *</label>
+            <input id="cm-code" type="text" value="${c?c.customerCode:''}" placeholder="e.g. KHONG01" ${isEdit?'readonly':''}
+              style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;letter-spacing:2px;text-transform:uppercase;outline:none;box-sizing:border-box;${isEdit?'background:#f5f5f5;':''}">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase">Name *</label>
+            <input id="cm-name" type="text" value="${c?c.name:''}" placeholder="Customer name"
+              style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:14px;outline:none;box-sizing:border-box">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase">Phone *</label>
+            <input id="cm-phone" type="tel" value="${c?c.phone:''}" placeholder="0812345678"
+              style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:14px;outline:none;box-sizing:border-box">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase">Discount % (all items)</label>
+            <input id="cm-discount" type="number" min="0" max="100" value="${c?c.discount:0}" placeholder="0"
+              style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:14px;outline:none;box-sizing:border-box">
+          </div>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase">Note</label>
+          <input id="cm-note" type="text" value="${c?c.note:''}" placeholder="e.g. VIP, wholesale"
+            style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:13px;outline:none;box-sizing:border-box">
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <label style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase">💲 Price Override (per product)</label>
+            <button onclick="addPriceOverrideRow()" style="padding:4px 10px;background:var(--light);border:1px solid var(--border);color:var(--accent);border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif">+ Add</button>
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">ชื่อสินค้า (EN) + ราคาพิเศษ แทนที่ราคาปกติ</div>
+          <div id="po-rows">${overrideRowsHTML}</div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button onclick="saveCustomer()" style="flex:1;padding:12px;background:linear-gradient(135deg,var(--accent),var(--grad2));border:none;color:white;border-radius:10px;cursor:pointer;font-size:14px;font-weight:700;font-family:'Nunito',sans-serif">💾 Save Customer</button>
+          <button onclick="closeCustomerModal()" style="padding:12px 20px;background:#f5f0f5;border:1px solid var(--border);border-radius:10px;color:var(--muted);cursor:pointer;font-size:13px;font-family:'Nunito',sans-serif">Cancel</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(el);
+}
+
+function addPriceOverrideRow() {
+  const container = document.getElementById('po-rows');
+  if (!container) return;
+  const div = document.createElement('div');
+  div.className = 'po-row';
+  div.style.cssText = 'display:flex;gap:8px;margin-bottom:8px';
+  div.innerHTML = `
+    <input type="text" class="po-name" placeholder="Product name (EN)"
+      style="flex:2;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:13px;outline:none">
+    <input type="number" class="po-price" placeholder="Price ฿" min="0"
+      style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:13px;outline:none">
+    <button onclick="this.parentElement.remove()" style="padding:8px;background:#fff0f0;border:1px solid #ffcccc;color:#c62828;border-radius:8px;cursor:pointer">✕</button>`;
+  container.appendChild(div);
+}
+
+function closeCustomerModal() {
+  const el = document.getElementById('customerModal');
+  if (el) el.remove();
+}
+
+async function saveCustomer() {
+  const code     = (document.getElementById('cm-code').value||'').trim().toUpperCase();
+  const name     = (document.getElementById('cm-name').value||'').trim();
+  const phone    = (document.getElementById('cm-phone').value||'').trim().replace(/\D/g,'');
+  const discount = parseFloat(document.getElementById('cm-discount').value)||0;
+  const note     = (document.getElementById('cm-note').value||'').trim();
+
+  if (!code || !name || !phone) {
+    showToast('⚠️ Please fill Code, Name and Phone');
+    return;
+  }
+
+  const priceOverride = {};
+  document.querySelectorAll('.po-row').forEach(row => {
+    const n = row.querySelector('.po-name')?.value?.trim();
+    const p = parseFloat(row.querySelector('.po-price')?.value);
+    if (n && !isNaN(p) && p > 0) priceOverride[n] = p;
+  });
+
+  const saveBtn = document.querySelector('#customerModal button[onclick="saveCustomer()"]');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving...'; }
+
+  try {
+    const resp = await fetch(scriptURL, {
+      method: 'POST', redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ type:'SaveCustomer', customerCode:code, name, phone, discount, priceOverride, note })
+    });
+    const result = await resp.text();
+    if (result === 'Customer Saved') {
+      await loadCustomersFromSheet();
+      renderCustomersList();
+      closeCustomerModal();
+      showToast('✅ Customer saved!');
+    } else {
+      showToast('Error: ' + result);
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 Save Customer'; }
+    }
+  } catch(e) {
+    showToast('Save failed');
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 Save Customer'; }
+  }
+}
+
+async function deleteCustomer(code) {
+  if (!confirm('Delete customer ' + code + '?')) return;
+  try {
+    const resp = await fetch(scriptURL, {
+      method: 'POST', redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ type:'DeleteCustomer', customerCode: code })
+    });
+    const result = await resp.text();
+    if (result === 'Customer Deleted') {
+      await loadCustomersFromSheet();
+      renderCustomersList();
+      showToast('🗑 Customer deleted');
+    }
+  } catch(e) { showToast('Delete failed'); }
+}
+
+// ===== CUSTOMER PRICE =====
+function getCustomerPrice(product) {
+  if (!currentUser) return product.price;
+  const override = currentUser.priceOverride || {};
+  // ตรวจ priceOverride ด้วยชื่อสินค้า (EN หรือ TH)
+  const keyEN = (product.nameEN || '').trim();
+  const keyTH = (product.nameTH || '').trim();
+  if (override[keyEN] !== undefined) return parseFloat(override[keyEN]) || product.price;
+  if (override[keyTH] !== undefined) return parseFloat(override[keyTH]) || product.price;
+  // ถ้าไม่มี override ให้หัก discount %
+  const disc = parseFloat(currentUser.discount) || 0;
+  if (disc > 0) return Math.round(product.price * (1 - disc/100));
+  return product.price;
+}
+
 // ===== PRODUCTS =====
 function renderProducts() {
   renderCategories();
@@ -2045,6 +2383,8 @@ function renderProducts() {
   document.getElementById('productsGrid').innerHTML = filtered.map(p => {
     const name = lang==='th' ? p.nameTH : p.nameEN;
     const inStock = p.stock > 0;
+    const custPrice = getCustomerPrice(p);
+    const hasSpecial = custPrice !== p.price;
     const imgHTML = p.imageData
       ? `<img src="${p.imageData}" alt="${name}" style="width:100%;height:110px;object-fit:cover;">`
       : `<div class="prod-img-placeholder">${p.emoji}</div>`;
@@ -2054,6 +2394,7 @@ function renderProducts() {
       <div class="prod-body">
         <div class="prod-top">
           <span class="stock-tag ${inStock?'in':'out'}">${inStock?(lang==='th'?'มีสินค้า':'In Stock'):(lang==='th'?'หมด':'Out of Stock')}</span>
+          ${hasSpecial ? `<span style="background:#e8f5e9;color:#2e7d32;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">⭐ Your Price</span>` : ''}
           <div class="prod-name">${name}</div>
           ${p.descTH||p.descEN ? `<div class="prod-desc">${lang==='th'?(p.descTH||p.descEN):(p.descEN||p.descTH)}</div>` : ''}
           <div class="prod-dims">📐 ${p.w}×${p.l}×${p.h} cm</div>
@@ -2061,8 +2402,9 @@ function renderProducts() {
         </div>
         <div class="prod-bottom">
           <div class="prod-price">
-            ${fmtPrice(p.price)}
-            ${(displayCurrency==='USD'&&usdRate)?`<span style="font-size:11px;color:var(--muted)">฿${p.price.toLocaleString()}</span>`:''}
+            ${fmtPrice(custPrice)}
+            ${hasSpecial ? `<span style="font-size:10px;color:var(--muted);text-decoration:line-through">฿${p.price.toLocaleString()}</span>` : ''}
+            ${(displayCurrency==='USD'&&usdRate)?`<span style="font-size:11px;color:var(--muted)">฿${custPrice.toLocaleString()}</span>`:''}
             <span>/ ${lang==='th'?'ชิ้น':'pc'}</span>
           </div>
           <button class="add-btn" onclick="addToCart(${p.id})" ${!inStock?'disabled':''}>
@@ -2218,7 +2560,8 @@ function renderCart() {
   let totalProduct = 0, totalWeight = 0;
   cartEl.innerHTML = items.map(({product:p, qty}) => {
     const name = lang==='th'?p.nameTH:p.nameEN;
-    totalProduct += p.price*qty;
+    const custPrice = getCustomerPrice(p);
+    totalProduct += custPrice*qty;
     totalWeight += p.weight*qty;
     return `
     <div class="cart-item">
@@ -2235,7 +2578,7 @@ function renderCart() {
           onclick="this.select()">
         <button class="qty-btn" onclick="updateCartQty(${p.id},1)">+</button>
       </div>
-      <div class="cart-price">${fmtPrice(p.price*qty)}</div>
+      <div class="cart-price">${fmtPrice(custPrice*qty)}</div>
     </div>`;
   }).join('');
 
@@ -2450,8 +2793,12 @@ function confirmAndDownload() {
 function goToOrder() {
   const ids = Object.keys(cart);
   if(!ids.length) return;
-  const items = ids.map(id=>({ product:products.find(p=>p.id==id), qty:cart[id] }));
-  const totalProduct = items.reduce((s,i)=>s+i.product.price*i.qty,0);
+  // ใช้ getCustomerPrice เพื่อให้ราคาในออเดอร์ตรงกับราคาที่ลูกค้าเห็น
+  const items = ids.map(id => {
+    const product = products.find(p=>p.id==id);
+    return { product, qty: cart[id], custPrice: getCustomerPrice(product) };
+  });
+  const totalProduct = items.reduce((s,i) => s + i.custPrice * i.qty, 0);
   const totalWeight = items.reduce((s,i)=>s+i.product.weight*i.qty,0);
   let boxNum = orderMode==='manual' ? selectedBox : getAutoBox(items);
   // check weight upgrade
@@ -2541,20 +2888,33 @@ function showAdminSection(s, btn) {
   document.querySelectorAll('.admin-tab').forEach(x=>x.classList.remove('active'));
   document.getElementById('admin-'+s).classList.add('active');
   if(btn) btn.classList.add('active');
-  if(s==='orders')   loadOrdersFromSheet().then(()=>renderAdminOrders());
-  if(s==='products') loadProductsFromSheet().then(()=>renderAdminProducts());
-  if(s==='shipping') loadShippingFromSheet().then(()=>renderShippingGrid());
-  if(s==='settings') loadSettingsFromSheet().then(()=>_fillAdminSettingsForm());
+  if(s==='orders')    loadOrdersFromSheet().then(()=>renderAdminOrders());
+  if(s==='products')  loadProductsFromSheet().then(()=>renderAdminProducts());
+  if(s==='shipping')  loadShippingFromSheet().then(()=>renderShippingGrid());
+  if(s==='settings')  loadSettingsFromSheet().then(()=>_fillAdminSettingsForm());
+  if(s==='customers') loadCustomersFromSheet().then(()=>renderCustomersList());
 }
 
 function renderAdminProducts() {
   document.getElementById('adminProductsTable').innerHTML = products.map(p => {
-    const name = lang==='th'?p.nameTH:p.nameEN;
+    const name   = lang==='th' ? p.nameTH : p.nameEN;
+    const cost   = p.cost || 0;
+    const margin = cost > 0 ? Math.round(((p.price - cost) / p.price) * 100) : null;
+    const profit = cost > 0 ? (p.price - cost) : null;
+    const marginColor = margin === null ? '#888' : margin >= 40 ? '#2e7d32' : margin >= 20 ? '#e65100' : '#c62828';
     return `<tr>
       <td style="width:50px">${p.imageData ? `<img src="${p.imageData}" style="width:44px;height:44px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">` : `<span style="font-size:24px">${p.emoji}</span>`}</td>
       <td><div style="font-weight:600">${name}</div><div style="font-size:11px;color:var(--muted)">${p.nameTH}</div></td>
       <td><span style="background:rgba(0,180,216,0.15);color:var(--teal);padding:3px 8px;border-radius:8px;font-size:11px;font-weight:700">${p.category}</span></td>
-      <td style="color:var(--gold);font-weight:700">฿${p.price.toLocaleString()}</td>
+      <td>
+        <div style="color:var(--gold);font-weight:700">฿${p.price.toLocaleString()}</div>
+        ${cost>0?`<div style="font-size:11px;color:#888">Cost: ฿${cost.toLocaleString()}</div>`:'<div style="font-size:11px;color:#ccc">No cost</div>'}
+      </td>
+      <td>
+        ${margin!==null
+          ? `<div style="font-size:13px;font-weight:700;color:${marginColor}">${margin}%</div><div style="font-size:11px;color:#888">+฿${profit.toLocaleString()}</div>`
+          : '<span style="font-size:11px;color:#ccc">—</span>'}
+      </td>
       <td>${p.weight}g</td>
       <td style="font-size:12px;color:var(--muted)">${p.w}×${p.l}×${p.h}</td>
       <td><span class="${p.stock>0?'stock-tag in':'stock-tag out'}">${p.stock}</span></td>
@@ -2712,10 +3072,48 @@ function confirmAdminOrder(i) {
   });
 }
 
-// ============================================================
-// แก้ไข 4: renderAdminOrders (version เดียว ถูกต้อง)
-// ลบ version เดิม (บรรทัด 2753-2773) ออก แล้วใช้อันนี้แทน
-// ============================================================
+// คำนวณต้นทุนและกำไรจากออเดอร์
+function calcOrderProfit(o) {
+  const itemsStr = typeof o.items === 'string' ? o.items : '';
+  if (!itemsStr) return null;
+
+  let totalCost    = 0;
+  let totalRevenue = 0;
+  let hasData      = false;
+
+  itemsStr.split(',').forEach(s => {
+    s = s.trim();
+    const m = s.match(/^(.+)\s+x(\d+)(?:\s+@(\d+(?:\.\d+)?))?$/i);
+    if (!m) return;
+    const name     = m[1].trim();
+    const qty      = parseInt(m[2]) || 1;
+    const sellPrice = m[3] ? parseFloat(m[3]) : null;
+
+    const prod = products.find(p =>
+      (p.nameEN||'').toLowerCase() === name.toLowerCase() ||
+      (p.nameTH||'').toLowerCase() === name.toLowerCase()
+    );
+    if (!prod) return;
+
+    const revenue = sellPrice !== null ? sellPrice * qty : prod.price * qty;
+    totalRevenue += revenue;
+
+    if (prod.cost > 0) {
+      totalCost += prod.cost * qty;
+      hasData = true;
+    }
+  });
+
+  if (!hasData) return null;
+
+  // ถ้าคำนวณ revenue จาก items ได้ ใช้เลย ถ้าไม่ได้ fallback จาก order total
+  const revenue = totalRevenue > 0 ? totalRevenue : (parseFloat(o.totalProduct || o.total) || 0);
+  const profit  = revenue - totalCost;
+  const margin  = revenue > 0 ? Math.round((profit / revenue) * 100) : 0;
+  return { cost: Math.round(totalCost), profit: Math.round(profit), margin };
+}
+
+
 let _ordersPage = 0;
 const _ordersPerPage = 10;
 
@@ -2742,6 +3140,10 @@ function renderAdminOrders() {
       ? o.items
       : (o.items||[]).map(i => i.product ? (i.product.nameEN||i.product.nameTH)+' x'+i.qty : String(i)).join(', ');
     const isConfirmed = o.status === 'confirmed';
+
+    // คำนวณต้นทุนและกำไร
+    const profitInfo = calcOrderProfit(o);
+
     return `
       <div style="background:white;border:1px solid #f0e0f0;border-radius:12px;padding:16px;margin-bottom:12px">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
@@ -2754,6 +3156,11 @@ function renderAdminOrders() {
           </div>
           <div style="text-align:right;flex-shrink:0">
             <div style="font-weight:700;color:var(--gold);font-size:16px">฿${(o.total||0).toLocaleString()}</div>
+            ${profitInfo ? `
+            <div style="font-size:11px;color:#888;margin-top:2px">Cost: ฿${profitInfo.cost.toLocaleString()}</div>
+            <div style="font-size:12px;font-weight:700;color:${profitInfo.profit>=0?'#2e7d32':'#c62828'};margin-top:1px">
+              ${profitInfo.profit>=0?'▲':'▼'} ฿${Math.abs(profitInfo.profit).toLocaleString()} (${profitInfo.margin}%)
+            </div>` : ''}
             <div style="margin-top:4px">
               <span style="padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;background:${isConfirmed?'#e8f5e9':'#fff3e0'};color:${isConfirmed?'#2e7d32':'#e65100'}">
                 ${isConfirmed ? '✓ Confirmed' : '⏳ Pending'}
@@ -2810,6 +3217,7 @@ function openProductModal(id=null) {
     document.getElementById('p-nameTH').value=p.nameTH;
     document.getElementById('p-nameEN').value=p.nameEN;
     document.getElementById('p-price').value=p.price;
+    document.getElementById('p-cost').value=p.cost||0;
     document.getElementById('p-weight').value=p.weight;
     document.getElementById('p-w').value=p.w;
     document.getElementById('p-l').value=p.l;
@@ -2823,7 +3231,7 @@ function openProductModal(id=null) {
     if(p.imageData) { currentImageData=p.imageData; showImagePreview(p.imageData,'current image'); }
     else { resetImageUpload(); }
   } else {
-    ['p-nameTH','p-nameEN','p-price','p-weight','p-w','p-l','p-h','p-stock','p-emoji','p-descTH','p-descEN'].forEach(f=>document.getElementById(f).value='');
+    ['p-nameTH','p-nameEN','p-price','p-cost','p-weight','p-w','p-l','p-h','p-stock','p-emoji','p-descTH','p-descEN'].forEach(f=>document.getElementById(f).value='');
     document.getElementById('p-category').value='Skincare';
     document.getElementById('p-status').value='active';
     resetImageUpload();
@@ -2923,27 +3331,28 @@ function resetImageUpload() {
 
 function saveProduct() {
   const data = {
-    nameTH: document.getElementById('p-nameTH').value.trim(),
-    nameEN: document.getElementById('p-nameEN').value.trim(),
-    price: parseInt(document.getElementById('p-price').value)||0,
-    weight: parseInt(document.getElementById('p-weight').value)||0,
-    w: parseFloat(document.getElementById('p-w').value)||1,
-    l: parseFloat(document.getElementById('p-l').value)||1,
-    h: parseFloat(document.getElementById('p-h').value)||1,
-    category: document.getElementById('p-category').value,
-    stock: parseInt(document.getElementById('p-stock').value)||0,
-    emoji: document.getElementById('p-emoji').value||'📦',
-    status: document.getElementById('p-status').value,
-    descTH: document.getElementById('p-descTH').value.trim(),
-    descEN: document.getElementById('p-descEN').value.trim(),
+    nameTH:    document.getElementById('p-nameTH').value.trim(),
+    nameEN:    document.getElementById('p-nameEN').value.trim(),
+    price:     parseInt(document.getElementById('p-price').value)||0,
+    cost:      parseInt(document.getElementById('p-cost').value)||0,
+    weight:    parseInt(document.getElementById('p-weight').value)||0,
+    w:         parseFloat(document.getElementById('p-w').value)||1,
+    l:         parseFloat(document.getElementById('p-l').value)||1,
+    h:         parseFloat(document.getElementById('p-h').value)||1,
+    category:  document.getElementById('p-category').value,
+    stock:     parseInt(document.getElementById('p-stock').value)||0,
+    emoji:     document.getElementById('p-emoji').value||'📦',
+    status:    document.getElementById('p-status').value,
+    descTH:    document.getElementById('p-descTH').value.trim(),
+    descEN:    document.getElementById('p-descEN').value.trim(),
     imageData: currentImageData !== null ? currentImageData : (editingProductId ? (products.find(p=>p.id===editingProductId)||{}).imageData||null : null),
   };
-  
-  if(!data.nameTH||!data.nameEN||!data.price||!data.weight) { 
-    showToast('Please fill all required fields'); 
-    return; 
+
+  if(!data.nameTH||!data.nameEN||!data.price||!data.weight) {
+    showToast('Please fill all required fields');
+    return;
   }
-  
+
   if(editingProductId) {
     const idx = products.findIndex(p=>p.id===editingProductId);
     products[idx] = {...products[idx],...data};
@@ -2953,7 +3362,7 @@ function saveProduct() {
     products.push(newProd);
     showToast(lang==='th'?'เพิ่มสินค้าแล้ว ✓':'Product added ✓');
   }
-  
+
   closeProductModal();
   renderAdminProducts();
   renderProducts();
@@ -3513,7 +3922,7 @@ applyLangTexts('en');
 updateRateDisplay();
 
 // GOOGLE SHEETS INTEGRATION v2 — Full Persistence
-const scriptURL = 'https://script.google.com/macros/s/AKfycbwx6B-0E2Ix4C4ZkIWxcX7RiTcAM_HWugrBIseA-nOjq0FcAHY0nLj_dfApR63Iear6/exec';
+const scriptURL = 'https://script.google.com/macros/s/AKfycbznDjAnTEUOCV9lBxNJjObKk59ww2oPbsg7jETyxMbnOs02Wf8AmR8tr0VVYk1Ahe7W/exec';
 
 // ─── LOADING OVERLAY ───
 function showLoadingOverlay(show) {
@@ -3540,22 +3949,22 @@ async function loadProductsFromSheet() {
     
     if (data && data.length > 0) {
       products = data.map(p => ({
-        id: p.id, 
-        nameTH: p.nameTH, 
+        id: p.id,
+        nameTH: p.nameTH,
         nameEN: p.nameEN,
-        price: parseFloat(p.price) || 0, 
-        weight: parseFloat(p.weight) || 0,
-        stock: parseInt(p.stock) || 0, 
-        category: p.category || 'Other',
-        emoji: p.emoji || '📦', 
+        price:     parseFloat(p.price)  || 0,
+        cost:      parseFloat(p.cost)   || 0,
+        weight:    parseFloat(p.weight) || 0,
+        stock:     parseInt(p.stock)    || 0,
+        category:  p.category || 'Other',
+        emoji:     p.emoji    || '📦',
         w: parseFloat(p.w) || 5,
-        l: parseFloat(p.l) || 5, 
+        l: parseFloat(p.l) || 5,
         h: parseFloat(p.h) || 5,
-        status: p.status || 'active', 
-        descTH: p.descTH || '', 
-        descEN: p.descEN || '',
-        // ✅ เพิ่มบรรทัดนี้เพื่อให้เว็บดึงรหัสรูปภาพมาจาก Google Sheets คอลัมน์ O
-        imageData: p.imageData || null 
+        status:    p.status   || 'active',
+        descTH:    p.descTH   || '',
+        descEN:    p.descEN   || '',
+        imageData: p.imageData || null
       }));
       
       renderProducts(); // วาดรายการสินค้าใหม่หน้าลูกค้า
@@ -3568,22 +3977,28 @@ async function loadProductsFromSheet() {
 
 async function saveOrderToSheet(d) {
   try {
-    // ใช้ redirect follow เพื่อให้ Apps Script รับข้อมูลได้
+    // บันทึก items พร้อมราคาพิเศษ เช่น "Liquid Soap x1 @180, Alada x2 @150"
+    const itemsStr = d.items.map(i => {
+      const price = i.custPrice || i.product.price;
+      return (i.product.nameEN || i.product.nameTH) + ' x' + i.qty + ' @' + price;
+    }).join(', ');
+
     const resp = await fetch(scriptURL, {
       method:   'POST',
       redirect: 'follow',
       headers:  { 'Content-Type': 'text/plain' },
       body: JSON.stringify({
-        type:     'Orders',
-        orderNum: d.orderNum,
-        name:     d.customer.name,
-        phone:    d.customer.phone,
-        country:  d.customer.country  || '',
-        address:  d.customer.address  || '',
-        items:    d.items.map(i => (i.product.nameEN || i.product.nameTH) + ' x' + i.qty).join(', '),
-        total:    d.total,
-        shipping: d.shipping,
-        status:   'pending',
+        type:         'Orders',
+        orderNum:     d.orderNum,
+        name:         d.customer.name,
+        phone:        d.customer.phone,
+        country:      d.customer.country  || '',
+        address:      d.customer.address  || '',
+        items:        itemsStr,
+        total:        d.total,
+        shipping:     d.shipping,
+        status:       'pending',
+        customerCode: d.customer.customerCode || '',
       })
     });
     const text = await resp.text();
@@ -3665,11 +4080,6 @@ async function loadShippingFromSheet() {
 }
 
 // ─── WRAP EXISTING FUNCTIONS ───
-// (saveOrderToSheet ถูกเรียกใน confirmAndDownload แล้ว ไม่ต้อง wrap ซ้ำ)
-const _origConfirmDL = confirmAndDownload;
-confirmAndDownload = function() {
-  _origConfirmDL();
-};
 
 const _origSaveProd = saveProduct;
 saveProduct = async function() {
@@ -3857,15 +4267,25 @@ function openInvoiceModal(i) {
   const customerName  = typeof o.customer === 'object' ? o.customer.name    : (o.customer || '-');
   const customerPhone = typeof o.customer === 'object' ? o.customer.phone   : (o.phone    || '-');
 
-  // parse items — ถ้ามาจาก Sheets เป็น string ให้หาราคาจาก products array
+  // parse items — รองรับทั้ง array (local) และ string จาก Sheets
+  // format string: "Liquid Soap x1 @180, Alada x2 @150"
   const itemsList = Array.isArray(o.items) && o.items.length > 0 && o.items[0].product
-    ? o.items.map(({product:p, qty}) => ({ name: p.nameEN||p.nameTH||'-', qty, price: p.price||0 }))
+    ? o.items.map(({product:p, qty, custPrice}) => ({
+        name:  p.nameEN||p.nameTH||'-',
+        qty,
+        price: custPrice || p.price || 0  // ใช้ราคาพิเศษก่อน
+      }))
     : String(o.items||'').split(',').map(s => s.trim()).filter(Boolean).map(s => {
+        // รองรับ "Liquid Soap x1 @180" หรือ "Liquid Soap x1"
+        const mWithPrice = s.match(/^(.+)\s+x(\d+)\s+@(\d+(?:\.\d+)?)$/i);
+        if (mWithPrice) {
+          return { name: mWithPrice[1].trim(), qty: parseInt(mWithPrice[2])||1, price: parseFloat(mWithPrice[3])||0 };
+        }
         const m = s.match(/^(.+)\s+x(\d+)$/i);
         if (!m) return { name: s, qty: 1, price: 0 };
         const name = m[1].trim();
         const qty  = parseInt(m[2]) || 1;
-        // หาราคาจาก products array โดย match ชื่อ
+        // fallback: หาราคาจาก products array
         const found = products.find(p =>
           (p.nameEN && p.nameEN.toLowerCase() === name.toLowerCase()) ||
           (p.nameTH && p.nameTH.toLowerCase() === name.toLowerCase())
@@ -4135,242 +4555,669 @@ function exportInvoiceXLSX() {
   const grandTotal    = Math.max(0, productTotal - discProdAmt) + Math.max(0, shipping - discShipAmt);
   const grandUSD      = (grandTotal / usdR).toFixed(2);
 
-  const load = (cb) => {
-    if (window.XLSX) { cb(); return; }
-    const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-    s.onload = cb;
-    document.head.appendChild(s);
-  };
+  // สร้าง HTML Invoice แล้วเปิด print dialog
+  const fmt = n => '฿' + Math.round(n).toLocaleString();
+  const fmtU = n => '$' + Number(n).toFixed(2);
 
-  load(() => {
-    _buildXLSX({
-      invNum: o.num, invDate, shopName: shopSettings.name||'K&R Thailand Shop',
-      shopLine: shopSettings.line||'@krthailandshop', shopWA: shopSettings.wa||'+66638068809',
-      cName, cPhone, cCountry, cAddr, note,
-      items, productTotal, discProdAmt, discProdT, discProd,
-      shipping, discShipAmt, discShipT, discShip,
-      grandTotal, grandUSD, usdR,
-    });
+  const itemRows = items.map((it, i) => `
+    <tr style="background:${i%2===0?'#fff':'#fff8fc'}">
+      <td style="padding:8px 10px;text-align:center;color:#888">${i+1}</td>
+      <td style="padding:8px 10px;font-weight:600">${it.name}</td>
+      <td style="padding:8px 10px;text-align:center">${it.qty}</td>
+      <td style="padding:8px 10px;text-align:right">${fmt(it.price)}</td>
+      <td style="padding:8px 10px;text-align:right;font-weight:700;color:#c2185b">${fmt(it.sub)}</td>
+      <td style="padding:8px 10px;text-align:right;color:#888">${fmtU(it.price/usdR)}</td>
+      <td style="padding:8px 10px;text-align:right;color:#0070c0;font-weight:600">${fmtU(it.sub/usdR)}</td>
+    </tr>`).join('');
 
-    // บันทึกข้อมูล Invoice กลับ Sheets
-    orders[_invoiceOrderIdx].status = 'confirmed';
-    fetch(scriptURL, { method:'POST', mode:'no-cors',
+  const totalRows = `
+    <tr><td colspan="4" style="padding:6px 10px;text-align:right;color:#555">Products Subtotal</td>
+      <td style="padding:6px 10px;text-align:right;font-weight:600">${fmt(productTotal)}</td>
+      <td colspan="2" style="padding:6px 10px;text-align:right;color:#0070c0">${fmtU(productTotal/usdR)}</td></tr>
+    ${discProdAmt>0?`<tr style="color:#e65100"><td colspan="4" style="padding:6px 10px;text-align:right">Product Discount (${discProdT==='pct'?discProd+'%':'฿'+discProdAmt})</td>
+      <td style="padding:6px 10px;text-align:right">-${fmt(discProdAmt)}</td>
+      <td colspan="2" style="padding:6px 10px;text-align:right">-${fmtU(discProdAmt/usdR)}</td></tr>`:''}
+    <tr><td colspan="4" style="padding:6px 10px;text-align:right;color:#555">Shipping Fee</td>
+      <td style="padding:6px 10px;text-align:right;font-weight:600">${fmt(shipping)}</td>
+      <td colspan="2" style="padding:6px 10px;text-align:right;color:#0070c0">${fmtU(shipping/usdR)}</td></tr>
+    ${discShipAmt>0?`<tr style="color:#e65100"><td colspan="4" style="padding:6px 10px;text-align:right">Shipping Discount (${discShipT==='pct'?discShip+'%':'฿'+discShipAmt})</td>
+      <td style="padding:6px 10px;text-align:right">-${fmt(discShipAmt)}</td>
+      <td colspan="2" style="padding:6px 10px;text-align:right">-${fmtU(discShipAmt/usdR)}</td></tr>`:''}
+    <tr style="background:#fff0f7;border-top:2px solid #c2185b">
+      <td colspan="4" style="padding:10px;text-align:right;font-weight:700;font-size:15px;color:#c2185b">GRAND TOTAL</td>
+      <td style="padding:10px;text-align:right;font-weight:700;font-size:16px;color:#c2185b">${fmt(grandTotal)}</td>
+      <td colspan="2" style="padding:10px;text-align:right;font-weight:700;font-size:14px;color:#0070c0">${fmtU(grandUSD)}</td>
+    </tr>`;
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<title>Invoice ${o.num}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:Arial,sans-serif; font-size:12px; color:#1a1a2e; background:#f5f5f5; }
+  .page { max-width:780px; margin:20px auto; background:white; box-shadow:0 4px 20px rgba(0,0,0,0.1); }
+  @media print { body{background:white} .page{margin:0;box-shadow:none} .no-print{display:none} }
+  table { width:100%; border-collapse:collapse; }
+  th { background:#fff0f7; color:#ad1457; font-size:11px; padding:8px 10px; text-align:left; border-bottom:2px solid #f0c0d0; }
+</style>
+</head><body>
+<div class="page">
+  <!-- Header -->
+  <div style="background:linear-gradient(135deg,#c2185b,#880e4f);color:white;padding:28px 32px;display:flex;justify-content:space-between;align-items:flex-start">
+    <div>
+      <div style="font-size:24px;font-weight:700;letter-spacing:2px">${shopSettings.name||'K&R Thailand Shop'}</div>
+      <div style="font-size:12px;opacity:0.7;margin-top:4px">COMMERCIAL INVOICE</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:11px;opacity:0.7">Invoice No.</div>
+      <div style="font-size:16px;font-weight:700;color:#f8bbd0">${o.num}</div>
+      <div style="font-size:11px;opacity:0.7;margin-top:6px">Date</div>
+      <div style="font-size:13px">${invDate}</div>
+      <div style="font-size:10px;opacity:0.6;margin-top:4px">1 USD = ฿${usdR}</div>
+    </div>
+  </div>
+
+  <div style="padding:24px 32px">
+    <!-- Bill To -->
+    <div style="background:#fff8fc;border:1px solid #f0c0d0;border-radius:8px;padding:16px;margin-bottom:20px">
+      <div style="font-size:10px;font-weight:700;color:#c2185b;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Bill To</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><span style="color:#888;font-size:10px">NAME</span><br><strong>${cName}</strong></div>
+        <div><span style="color:#888;font-size:10px">PHONE</span><br><strong>${cPhone}</strong></div>
+        <div><span style="color:#888;font-size:10px">COUNTRY</span><br><strong>${cCountry}</strong></div>
+        <div><span style="color:#888;font-size:10px">ADDRESS</span><br><strong>${cAddr}</strong></div>
+      </div>
+    </div>
+
+    <!-- Items -->
+    <table style="margin-bottom:0;border:1px solid #f0c0d0;border-radius:8px;overflow:hidden">
+      <thead><tr>
+        <th style="width:40px;text-align:center">#</th>
+        <th>Product</th>
+        <th style="width:50px;text-align:center">Qty</th>
+        <th style="text-align:right">Unit (฿)</th>
+        <th style="text-align:right">Sub (฿)</th>
+        <th style="text-align:right">Unit ($)</th>
+        <th style="text-align:right">Sub ($)</th>
+      </tr></thead>
+      <tbody>${itemRows}</tbody>
+      <tfoot style="border-top:1px solid #f0c0d0">${totalRows}</tfoot>
+    </table>
+
+    <!-- Payment -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px">
+      <div style="background:#f8f8ff;border:1px solid #e0e0ff;border-radius:8px;padding:16px">
+        <div style="font-size:10px;font-weight:700;color:#c2185b;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Payment Details</div>
+        <table style="font-size:11px">
+          <tr><td style="color:#888;padding:2px 8px 2px 0">Bank</td><td><strong>KASIKORN BANK</strong></td></tr>
+          <tr><td style="color:#888;padding:2px 8px 2px 0">Account</td><td><strong style="color:#c62828;font-size:13px">564-24-553-05</strong></td></tr>
+          <tr><td style="color:#888;padding:2px 8px 2px 0">Name</td><td>KHONGKHA BUMRUNGKHET</td></tr>
+          <tr><td style="color:#888;padding:2px 8px 2px 0">Swift</td><td><strong>KASITHBK</strong></td></tr>
+          <tr><td style="color:#888;padding:2px 8px 2px 0">Line</td><td style="color:#00b900"><strong>${shopSettings.line||'@krthailandshop'}</strong></td></tr>
+          <tr><td style="color:#888;padding:2px 8px 2px 0">WhatsApp</td><td style="color:#25d366"><strong>${shopSettings.wa||'+66638068809'}</strong></td></tr>
+        </table>
+      </div>
+      <div style="display:flex;flex-direction:column;justify-content:space-between">
+        ${note?`<div style="background:#fffde7;border:1px solid #ffe082;border-radius:8px;padding:12px;font-size:11px"><strong>Note:</strong><br>${note}</div>`:'<div></div>'}
+        <div style="border-top:1px dashed #ddd;padding-top:12px;text-align:center">
+          <div style="font-size:10px;color:#888;margin-bottom:24px">Authorized Signature</div>
+          <div style="border-top:1px solid #999;padding-top:6px;font-size:11px;font-weight:700;color:#c2185b">${shopSettings.name||'K&R Thailand Shop'}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="no-print" style="text-align:center;padding:16px">
+  <button onclick="window.print()" style="padding:12px 32px;background:#c2185b;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700;margin-right:8px">🖨 Print / Save PDF</button>
+  <button onclick="window.close()" style="padding:12px 24px;background:#eee;border:none;border-radius:8px;cursor:pointer;font-size:13px">✕ Close</button>
+</div>
+</body></html>`;
+
+  const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+  const url  = URL.createObjectURL(blob);
+  const win  = window.open(url, '_blank');
+  if (win) setTimeout(() => URL.revokeObjectURL(url), 30000);
+
+  // บันทึกกลับ Sheets
+  orders[_invoiceOrderIdx].status = 'confirmed';
+  fetch(scriptURL, {
+    method:'POST', redirect:'follow',
+    headers:{'Content-Type':'text/plain'},
+    body: JSON.stringify({
+      type:'UpdateOrderStatus', orderNum:o.num, status:'confirmed',
+      confirmedDate: new Date().toLocaleDateString(),
+      discProduct: discProdAmt, discShipping: discShipAmt,
+      grandTotal, invoiceNote: note,
+    })
+  }).then(() => { _updateOrdersBadge(); renderAdminOrders(); });
+
+  showToast('🧾 Invoice opened!');
+}
+
+
+// ================================================================
+// ADMIN INVOICE BUILDER — สร้าง Invoice ให้ลูกค้าโดยไม่ต้องให้ลูกค้าสั่ง
+// ================================================================
+let _aibItems = []; // [{product, qty, custPrice}]
+let _aibCustomer = null;
+
+function openAdminInvoiceBuilder() {
+  _aibItems = [];
+  _aibCustomer = null;
+
+  const el = document.createElement('div');
+  el.id = 'aibModal';
+  el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9600;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;backdrop-filter:blur(6px)';
+  el.innerHTML = `
+    <div style="background:white;width:100%;max-width:640px;min-height:100vh;box-sizing:border-box">
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg,#1a7a4a,#27ae60);padding:18px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:1">
+        <div style="font-family:'Playfair Display',serif;font-size:18px;color:white">🧾 Create Invoice for Customer</div>
+        <button onclick="closeAIB()" style="background:rgba(255,255,255,0.2);border:none;color:white;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:16px;font-weight:700">✕</button>
+      </div>
+
+      <div style="padding:16px;display:flex;flex-direction:column;gap:14px">
+
+        <!-- Step 1: Customer Code -->
+        <div style="background:#f8fff8;border:1.5px solid #a5d6a7;border-radius:12px;padding:14px">
+          <div style="font-size:11px;font-weight:700;color:#2e7d32;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Step 1 — Customer</div>
+          <div style="display:flex;gap:8px">
+            <input id="aib-code" type="text" placeholder="Customer Code e.g. KHONG01"
+              style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;letter-spacing:2px;text-transform:uppercase;outline:none"
+              oninput="aibSearchCustomer(this.value)">
+            <button onclick="aibSearchCustomer(document.getElementById('aib-code').value,true)"
+              style="padding:10px 16px;background:var(--accent);border:none;color:white;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;font-family:'Nunito',sans-serif">
+              Find
+            </button>
+          </div>
+          <div id="aib-cust-info" style="margin-top:10px"></div>
+        </div>
+
+        <!-- Step 2: Add Products -->
+        <div style="background:#fff8fc;border:1.5px solid #f0c0d0;border-radius:12px;padding:14px">
+          <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Step 2 — Add Products</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <div style="flex:2;min-width:160px;position:relative">
+              <input id="aib-prod-search" type="text" placeholder="Search product..."
+                oninput="aibFilterProducts(this.value)"
+                style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:13px;outline:none;box-sizing:border-box">
+            </div>
+            <input id="aib-prod-qty" type="number" min="1" value="1" placeholder="Qty"
+              style="width:70px;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:13px;text-align:center;outline:none">
+          </div>
+          <div id="aib-prod-list" style="margin-top:8px;max-height:200px;overflow-y:auto"></div>
+        </div>
+
+        <!-- Items in Invoice -->
+        <div style="background:white;border:1px solid var(--border);border-radius:12px;overflow:hidden">
+          <div style="padding:10px 14px;background:#fff0f7;font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px">
+            Invoice Items
+          </div>
+          <div id="aib-items-list" style="padding:10px 14px">
+            <p style="color:var(--muted);font-size:13px;text-align:center;padding:12px">No items yet</p>
+          </div>
+        </div>
+
+        <!-- Shipping & Discount -->
+        <div style="background:#fff8fc;border:1px solid var(--border);border-radius:12px;padding:14px">
+          <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Shipping & Discount</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div><label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">Shipping Fee (฿)</label>
+              <input id="aib-shipping" type="number" min="0" value="1000"
+                style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:13px;outline:none;box-sizing:border-box" oninput="aibRecalc()"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div><label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">Product Discount</label>
+                <div style="display:flex;gap:6px">
+                  <input id="aib-disc-prod" type="number" min="0" value="0"
+                    style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:13px;outline:none" oninput="aibRecalc()">
+                  <select id="aib-disc-prod-type" onchange="aibRecalc()"
+                    style="padding:8px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:13px;outline:none;background:white">
+                    <option value="thb">฿</option><option value="pct">%</option>
+                  </select>
+                </div>
+              </div>
+              <div><label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">Shipping Discount</label>
+                <div style="display:flex;gap:6px">
+                  <input id="aib-disc-ship" type="number" min="0" value="0"
+                    style="flex:1;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:13px;outline:none" oninput="aibRecalc()">
+                  <select id="aib-disc-ship-type" onchange="aibRecalc()"
+                    style="padding:8px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:13px;outline:none;background:white">
+                    <option value="thb">฿</option><option value="pct">%</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div><label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">USD Rate</label>
+                <input id="aib-usdrate" type="number" min="1" value="${typeof usdRate!=='undefined'&&usdRate?usdRate:35.5}" step="0.01"
+                  style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:13px;outline:none;box-sizing:border-box" oninput="aibRecalc()"></div>
+              <div><label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px">Invoice Date</label>
+                <input id="aib-date" type="date" value="${new Date().toISOString().split('T')[0]}"
+                  style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'Nunito',sans-serif;font-size:13px;outline:none;box-sizing:border-box"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Note -->
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:1px">Note / Remark</label>
+          <textarea id="aib-note" rows="2" placeholder="e.g. Payment due within 3 days. Thank you!"
+            style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:13px;outline:none;resize:vertical;box-sizing:border-box"></textarea>
+        </div>
+
+        <!-- Summary -->
+        <div style="background:linear-gradient(135deg,#1a1a2e,#0f3460);border-radius:12px;padding:16px;color:white">
+          <div style="font-size:11px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Summary</div>
+          <div id="aib-summary"></div>
+        </div>
+
+        <!-- Actions -->
+        <div style="display:flex;gap:10px;flex-wrap:wrap;padding-bottom:16px">
+          <button onclick="aibPrintInvoice()"
+            style="flex:1;padding:14px;background:linear-gradient(135deg,#1a7a4a,#27ae60);border:none;color:white;border-radius:12px;cursor:pointer;font-size:14px;font-weight:700;font-family:'Nunito',sans-serif;min-width:140px">
+            🖨 Print Invoice
+          </button>
+          <button onclick="aibSaveAsOrder()"
+            style="flex:1;padding:14px;background:linear-gradient(135deg,var(--accent),var(--grad2));border:none;color:white;border-radius:12px;cursor:pointer;font-size:14px;font-weight:700;font-family:'Nunito',sans-serif;min-width:140px">
+            💾 Save as Order
+          </button>
+          <button onclick="closeAIB()"
+            style="padding:14px 20px;background:#f5f0f5;border:1px solid var(--border);border-radius:12px;color:var(--muted);cursor:pointer;font-size:13px;font-family:'Nunito',sans-serif">
+            Cancel
+          </button>
+        </div>
+
+      </div>
+    </div>`;
+  document.body.appendChild(el);
+  aibFilterProducts('');
+  aibRecalc();
+}
+
+function closeAIB() {
+  const el = document.getElementById('aibModal');
+  if (el) el.remove();
+  _aibItems = [];
+  _aibCustomer = null;
+}
+
+function aibSearchCustomer(val, force) {
+  const code = (val||'').toUpperCase().trim();
+  const infoEl = document.getElementById('aib-cust-info');
+  if (!infoEl) return;
+  if (!code) { infoEl.innerHTML = ''; return; }
+
+  const c = customers.find(x => x.customerCode === code);
+  if (c) {
+    _aibCustomer = c;
+    const hasOverride = Object.keys(c.priceOverride||{}).length > 0;
+    infoEl.innerHTML = `
+      <div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:10px;font-size:13px">
+        <div style="font-weight:700;color:#2e7d32">✅ ${c.customerCode} — ${c.name}</div>
+        <div style="color:#555;margin-top:2px">📱 ${c.phone}
+          ${c.discount>0?` · 🏷 ${c.discount}% discount`:''}
+          ${hasOverride?' · 💲 Custom prices':''}
+        </div>
+        ${c.note?`<div style="color:var(--muted);font-size:12px">📝 ${c.note}</div>`:''}
+      </div>`;
+    // ดึงประวัติออเดอร์ของลูกค้า
+    aibShowHistory(c);
+    // refresh ราคาสินค้า
+    aibFilterProducts(document.getElementById('aib-prod-search')?.value || '');
+  } else if (code.length >= 3) {
+    _aibCustomer = null;
+    infoEl.innerHTML = `<div style="color:#c62828;font-size:13px;padding:8px">❌ Customer "${code}" not found</div>`;
+  } else {
+    _aibCustomer = null;
+    infoEl.innerHTML = '';
+  }
+  aibRecalc();
+}
+
+function aibShowHistory(c) {
+  // หาออเดอร์ของลูกค้านี้จาก orders array
+  const hist = orders.filter(o =>
+    (o.customer||'').toLowerCase() === c.name.toLowerCase() ||
+    (o.phone||'').replace(/\D/g,'') === c.phone.replace(/\D/g,'')
+  ).slice(-5).reverse();
+
+  const infoEl = document.getElementById('aib-cust-info');
+  if (!hist.length || !infoEl) return;
+
+  const histHTML = `
+    <div style="margin-top:8px;background:#fff8fc;border:1px solid #f0c0d0;border-radius:8px;padding:10px">
+      <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📦 Order History (last ${hist.length})</div>
+      ${hist.map(o=>`
+        <div style="font-size:12px;color:#555;padding:4px 0;border-bottom:1px solid #f5e8f5;cursor:pointer" onclick="aibLoadFromOrder('${o.num}')">
+          <span style="color:var(--accent);font-weight:700">${o.num}</span>
+          · ${o.date} · ฿${(o.total||0).toLocaleString()}
+          · <span style="color:#888">${typeof o.items==='string'?o.items:(o.items||[]).map(i=>i.product?(i.product.nameEN||'?')+' x'+i.qty:'').join(', ')}</span>
+          <span style="color:#27ae60;font-size:11px;margin-left:4px">↩ Load</span>
+        </div>`).join('')}
+    </div>`;
+
+  infoEl.innerHTML = infoEl.innerHTML + histHTML;
+}
+
+function aibLoadFromOrder(orderNum) {
+  const o = orders.find(x => x.num === orderNum);
+  if (!o) return;
+  // parse items จาก string เพิ่มเข้า _aibItems
+  const itemsStr = typeof o.items === 'string' ? o.items : '';
+  const parsed = itemsStr.split(',').map(s => s.trim()).filter(Boolean).map(s => {
+    const m = s.match(/^(.+)\s+x(\d+)(?:\s+@(\d+(?:\.\d+)?))?$/i);
+    if (!m) return null;
+    const name = m[1].trim();
+    const qty  = parseInt(m[2])||1;
+    const priceFromOrder = m[3] ? parseFloat(m[3]) : 0;
+    const prod = products.find(p =>
+      (p.nameEN||'').toLowerCase()===name.toLowerCase() ||
+      (p.nameTH||'').toLowerCase()===name.toLowerCase()
+    );
+    if (!prod) return null;
+    const custPrice = priceFromOrder || (_aibCustomer ? getCustomerPriceFor(_aibCustomer, prod) : prod.price);
+    return { product: prod, qty, custPrice };
+  }).filter(Boolean);
+
+  parsed.forEach(item => {
+    const existing = _aibItems.find(x => x.product.id === item.product.id);
+    if (existing) existing.qty += item.qty;
+    else _aibItems.push(item);
+  });
+
+  aibRenderItems();
+  aibRecalc();
+  showToast('↩ Items loaded from ' + orderNum);
+}
+
+function getCustomerPriceFor(c, product) {
+  if (!c) return product.price;
+  const override = c.priceOverride || {};
+  if (override[product.nameEN] !== undefined) return parseFloat(override[product.nameEN]) || product.price;
+  if (override[product.nameTH] !== undefined) return parseFloat(override[product.nameTH]) || product.price;
+  const disc = parseFloat(c.discount) || 0;
+  if (disc > 0) return Math.round(product.price * (1 - disc/100));
+  return product.price;
+}
+
+function aibFilterProducts(q) {
+  const listEl = document.getElementById('aib-prod-list');
+  if (!listEl) return;
+  const query = (q||'').toLowerCase();
+  const filtered = products.filter(p =>
+    p.status === 'active' &&
+    (!query || (p.nameEN||'').toLowerCase().includes(query) || (p.nameTH||'').includes(q))
+  ).slice(0, 10);
+
+  if (!filtered.length) {
+    listEl.innerHTML = '<p style="color:var(--muted);font-size:12px;padding:8px">No products found</p>';
+    return;
+  }
+  listEl.innerHTML = filtered.map(p => {
+    const custPrice = _aibCustomer ? getCustomerPriceFor(_aibCustomer, p) : p.price;
+    const hasDiscount = custPrice < p.price;
+    return `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;border-radius:8px;cursor:pointer;border-bottom:1px solid #f5e8f5"
+        onclick="aibAddProduct('${p.id}')">
+        <div>
+          <span style="font-size:13px;font-weight:600">${p.emoji||''} ${p.nameEN}</span>
+          ${hasDiscount?`<span style="font-size:11px;color:#888;text-decoration:line-through;margin-left:6px">฿${p.price}</span>`:''}
+        </div>
+        <div style="text-align:right">
+          <span style="font-weight:700;color:${hasDiscount?'#27ae60':'var(--gold)'};font-size:14px">฿${custPrice.toLocaleString()}</span>
+          <span style="display:block;font-size:11px;color:#888">${p.weight}g · Stock:${p.stock}</span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function aibAddProduct(productId) {
+  const p = products.find(x => x.id == productId);
+  if (!p) return;
+  const qty = parseInt(document.getElementById('aib-prod-qty')?.value) || 1;
+  const custPrice = _aibCustomer ? getCustomerPriceFor(_aibCustomer, p) : p.price;
+  const existing = _aibItems.find(x => x.product.id === p.id);
+  if (existing) existing.qty += qty;
+  else _aibItems.push({ product: p, qty, custPrice });
+  aibRenderItems();
+  aibRecalc();
+  showToast(`✅ Added: ${p.nameEN} x${qty}`);
+}
+
+function aibRenderItems() {
+  const el = document.getElementById('aib-items-list');
+  if (!el) return;
+  if (!_aibItems.length) {
+    el.innerHTML = '<p style="color:var(--muted);font-size:13px;text-align:center;padding:12px">No items yet</p>';
+    return;
+  }
+  el.innerHTML = _aibItems.map((item, i) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f5e8f5">
+      <div style="flex:1;font-size:13px;font-weight:600">${item.product.emoji||''} ${item.product.nameEN}</div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <button onclick="_aibItems[${i}].qty=Math.max(1,_aibItems[${i}].qty-1);aibRenderItems();aibRecalc()"
+          style="width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:white;cursor:pointer;font-size:14px;font-weight:700;font-family:'Nunito',sans-serif">−</button>
+        <span style="min-width:28px;text-align:center;font-weight:700;font-size:14px">${item.qty}</span>
+        <button onclick="_aibItems[${i}].qty++;aibRenderItems();aibRecalc()"
+          style="width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:white;cursor:pointer;font-size:14px;font-weight:700;font-family:'Nunito',sans-serif">+</button>
+      </div>
+      <div style="min-width:80px;text-align:right">
+        <input type="number" min="0" value="${item.custPrice}"
+          style="width:76px;text-align:right;padding:4px;border:1.5px solid var(--border);border-radius:6px;font-family:'Nunito',sans-serif;font-size:13px;outline:none"
+          onchange="_aibItems[${i}].custPrice=parseFloat(this.value)||0;aibRecalc()">
+      </div>
+      <div style="min-width:70px;text-align:right;font-weight:700;color:var(--gold)">฿${(item.qty*item.custPrice).toLocaleString()}</div>
+      <button onclick="_aibItems.splice(${i},1);aibRenderItems();aibRecalc()"
+        style="padding:4px 8px;background:#fff0f0;border:1px solid #ffcccc;color:#c62828;border-radius:6px;cursor:pointer;font-size:12px">✕</button>
+    </div>`).join('');
+}
+
+function aibRecalc() {
+  const el = document.getElementById('aib-summary');
+  if (!el) return;
+  const shipping   = parseFloat(document.getElementById('aib-shipping')?.value)       || 0;
+  const discProd   = parseFloat(document.getElementById('aib-disc-prod')?.value)       || 0;
+  const discProdT  = document.getElementById('aib-disc-prod-type')?.value || 'thb';
+  const discShip   = parseFloat(document.getElementById('aib-disc-ship')?.value)       || 0;
+  const discShipT  = document.getElementById('aib-disc-ship-type')?.value || 'thb';
+  const usdR       = parseFloat(document.getElementById('aib-usdrate')?.value)         || 35.5;
+
+  const productTotal = _aibItems.reduce((s,i) => s + i.qty*i.custPrice, 0);
+  const discProdAmt  = discProdT==='pct' ? Math.round(productTotal*discProd/100) : discProd;
+  const discShipAmt  = discShipT==='pct' ? Math.round(shipping*discShip/100)     : discShip;
+  const grandTotal   = Math.max(0, productTotal-discProdAmt) + Math.max(0, shipping-discShipAmt);
+
+  const fmt    = n => '฿' + Math.round(n).toLocaleString();
+  const fmtUSD = n => '$' + (n/usdR).toFixed(2);
+
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;color:rgba(255,255,255,0.7)"><span>Products (${_aibItems.length} items)</span><span>${fmt(productTotal)}</span></div>
+    ${discProdAmt>0?`<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;color:#f39c12"><span>Product Discount</span><span>-${fmt(discProdAmt)}</span></div>`:''}
+    <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;color:rgba(255,255,255,0.7)"><span>Shipping</span><span>${fmt(shipping)}</span></div>
+    ${discShipAmt>0?`<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;color:#f39c12"><span>Shipping Discount</span><span>-${fmt(discShipAmt)}</span></div>`:''}
+    <div style="display:flex;justify-content:space-between;padding:10px 0 4px;font-size:20px;font-weight:700;border-top:1px solid rgba(255,255,255,0.2);margin-top:6px">
+      <span style="color:#f5a623">Grand Total</span>
+      <span style="color:#f5a623">${fmt(grandTotal)} <span style="font-size:13px;color:#00b4d8">(${fmtUSD(grandTotal)})</span></span>
+    </div>`;
+}
+
+function aibPrintInvoice() {
+  if (!_aibItems.length) { showToast('⚠️ Please add items first'); return; }
+  if (!_aibCustomer) { showToast('⚠️ Please select a customer first'); return; }
+
+  const shipping   = parseFloat(document.getElementById('aib-shipping').value)       || 0;
+  const discProd   = parseFloat(document.getElementById('aib-disc-prod').value)       || 0;
+  const discProdT  = document.getElementById('aib-disc-prod-type').value;
+  const discShip   = parseFloat(document.getElementById('aib-disc-ship').value)       || 0;
+  const discShipT  = document.getElementById('aib-disc-ship-type').value;
+  const usdR       = parseFloat(document.getElementById('aib-usdrate').value)         || 35.5;
+  const invDate    = document.getElementById('aib-date').value;
+  const note       = document.getElementById('aib-note').value;
+
+  const productTotal = _aibItems.reduce((s,i) => s + i.qty*i.custPrice, 0);
+  const discProdAmt  = discProdT==='pct' ? Math.round(productTotal*discProd/100) : discProd;
+  const discShipAmt  = discShipT==='pct' ? Math.round(shipping*discShip/100)     : discShip;
+  const grandTotal   = Math.max(0, productTotal-discProdAmt) + Math.max(0, shipping-discShipAmt);
+  const grandUSD     = (grandTotal/usdR).toFixed(2);
+
+  const now = new Date();
+  const invNum = 'KR-INV-' + now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '-' + Math.floor(Math.random()*900+100);
+
+  const fmt  = n => '฿' + Math.round(n).toLocaleString();
+  const fmtU = n => '$' + Number(n).toFixed(2);
+
+  const itemRows = _aibItems.map((item, i) => `
+    <tr style="background:${i%2===0?'#fff':'#fff8fc'}">
+      <td style="padding:8px 10px;text-align:center;color:#888">${i+1}</td>
+      <td style="padding:8px 10px;font-weight:600">${item.product.emoji||''} ${item.product.nameEN}</td>
+      <td style="padding:8px 10px;text-align:center">${item.qty}</td>
+      <td style="padding:8px 10px;text-align:right">${fmt(item.custPrice)}</td>
+      <td style="padding:8px 10px;text-align:right;font-weight:700;color:#c2185b">${fmt(item.qty*item.custPrice)}</td>
+      <td style="padding:8px 10px;text-align:right;color:#888">${fmtU(item.custPrice/usdR)}</td>
+      <td style="padding:8px 10px;text-align:right;color:#0070c0;font-weight:600">${fmtU(item.qty*item.custPrice/usdR)}</td>
+    </tr>`).join('');
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Invoice ${invNum}</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:Arial,sans-serif;font-size:12px;color:#1a1a2e;background:#f5f5f5}
+  .page{max-width:780px;margin:20px auto;background:white;box-shadow:0 4px 20px rgba(0,0,0,0.1)}
+  @media print{body{background:white}.page{margin:0;box-shadow:none}.no-print{display:none}}
+  table{width:100%;border-collapse:collapse}
+  th{background:#fff0f7;color:#ad1457;font-size:11px;padding:8px 10px;text-align:left;border-bottom:2px solid #f0c0d0}
+</style></head><body>
+<div class="page">
+  <div style="background:linear-gradient(135deg,#c2185b,#880e4f);color:white;padding:28px 32px;display:flex;justify-content:space-between;align-items:flex-start">
+    <div>
+      <div style="font-size:24px;font-weight:700;letter-spacing:2px">${shopSettings.name||'K&R Thailand Shop'}</div>
+      <div style="font-size:12px;opacity:0.7;margin-top:4px">COMMERCIAL INVOICE</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:11px;opacity:0.7">Invoice No.</div>
+      <div style="font-size:15px;font-weight:700;color:#f8bbd0">${invNum}</div>
+      <div style="font-size:11px;opacity:0.7;margin-top:4px">Date: ${invDate}</div>
+      <div style="font-size:10px;opacity:0.6;margin-top:2px">1 USD = ฿${usdR}</div>
+    </div>
+  </div>
+  <div style="padding:24px 32px">
+    <div style="background:#fff8fc;border:1px solid #f0c0d0;border-radius:8px;padding:16px;margin-bottom:20px">
+      <div style="font-size:10px;font-weight:700;color:#c2185b;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Bill To</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><span style="color:#888;font-size:10px">NAME</span><br><strong>${_aibCustomer.name}</strong></div>
+        <div><span style="color:#888;font-size:10px">PHONE</span><br><strong>${_aibCustomer.phone}</strong></div>
+        <div><span style="color:#888;font-size:10px">CODE</span><br><strong style="color:#c2185b">${_aibCustomer.customerCode}</strong></div>
+        ${_aibCustomer.note?`<div><span style="color:#888;font-size:10px">NOTE</span><br>${_aibCustomer.note}</div>`:''}
+      </div>
+    </div>
+    <table style="margin-bottom:0;border:1px solid #f0c0d0;border-radius:8px;overflow:hidden">
+      <thead><tr>
+        <th style="width:40px;text-align:center">#</th>
+        <th>Product</th>
+        <th style="width:50px;text-align:center">Qty</th>
+        <th style="text-align:right">Unit (฿)</th>
+        <th style="text-align:right">Sub (฿)</th>
+        <th style="text-align:right">Unit ($)</th>
+        <th style="text-align:right">Sub ($)</th>
+      </tr></thead>
+      <tbody>${itemRows}</tbody>
+      <tfoot style="border-top:1px solid #f0c0d0">
+        <tr><td colspan="4" style="padding:6px 10px;text-align:right;color:#555">Products Subtotal</td><td style="padding:6px 10px;text-align:right;font-weight:600">${fmt(productTotal)}</td><td colspan="2" style="padding:6px 10px;text-align:right;color:#0070c0">${fmtU(productTotal/usdR)}</td></tr>
+        ${discProdAmt>0?`<tr style="color:#e65100"><td colspan="4" style="padding:6px 10px;text-align:right">Product Discount (${discProdT==='pct'?discProd+'%':'฿'+discProdAmt})</td><td style="padding:6px 10px;text-align:right">-${fmt(discProdAmt)}</td><td colspan="2" style="padding:6px 10px;text-align:right">-${fmtU(discProdAmt/usdR)}</td></tr>`:''}
+        <tr><td colspan="4" style="padding:6px 10px;text-align:right;color:#555">Shipping Fee</td><td style="padding:6px 10px;text-align:right;font-weight:600">${fmt(shipping)}</td><td colspan="2" style="padding:6px 10px;text-align:right;color:#0070c0">${fmtU(shipping/usdR)}</td></tr>
+        ${discShipAmt>0?`<tr style="color:#e65100"><td colspan="4" style="padding:6px 10px;text-align:right">Shipping Discount (${discShipT==='pct'?discShip+'%':'฿'+discShipAmt})</td><td style="padding:6px 10px;text-align:right">-${fmt(discShipAmt)}</td><td colspan="2" style="padding:6px 10px;text-align:right">-${fmtU(discShipAmt/usdR)}</td></tr>`:''}
+        <tr style="background:#fff0f7;border-top:2px solid #c2185b">
+          <td colspan="4" style="padding:10px;text-align:right;font-weight:700;font-size:15px;color:#c2185b">GRAND TOTAL</td>
+          <td style="padding:10px;text-align:right;font-weight:700;font-size:16px;color:#c2185b">${fmt(grandTotal)}</td>
+          <td colspan="2" style="padding:10px;text-align:right;font-weight:700;font-size:14px;color:#0070c0">${fmtU(grandUSD)}</td>
+        </tr>
+      </tfoot>
+    </table>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px">
+      <div style="background:#f8f8ff;border:1px solid #e0e0ff;border-radius:8px;padding:16px">
+        <div style="font-size:10px;font-weight:700;color:#c2185b;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Payment Details</div>
+        <table style="font-size:11px">
+          <tr><td style="color:#888;padding:2px 8px 2px 0">Bank</td><td><strong>KASIKORN BANK</strong></td></tr>
+          <tr><td style="color:#888;padding:2px 8px 2px 0">Account</td><td><strong style="color:#c62828;font-size:13px">564-24-553-05</strong></td></tr>
+          <tr><td style="color:#888;padding:2px 8px 2px 0">Name</td><td>KHONGKHA BUMRUNGKHET</td></tr>
+          <tr><td style="color:#888;padding:2px 8px 2px 0">Swift</td><td><strong>KASITHBK</strong></td></tr>
+          <tr><td style="color:#888;padding:2px 8px 2px 0">Line</td><td style="color:#00b900"><strong>${shopSettings.line||'@krthailandshop'}</strong></td></tr>
+          <tr><td style="color:#888;padding:2px 8px 2px 0">WhatsApp</td><td style="color:#25d366"><strong>${shopSettings.wa||'+66638068809'}</strong></td></tr>
+        </table>
+      </div>
+      <div style="display:flex;flex-direction:column;justify-content:space-between">
+        ${note?`<div style="background:#fffde7;border:1px solid #ffe082;border-radius:8px;padding:12px;font-size:11px"><strong>Note:</strong><br>${note}</div>`:'<div></div>'}
+        <div style="border-top:1px dashed #ddd;padding-top:10px;text-align:center">
+          <div style="font-size:10px;color:#888;margin-bottom:20px">Authorized Signature</div>
+          <div style="border-top:1px solid #999;padding-top:6px;font-size:11px;font-weight:700;color:#c2185b">${shopSettings.name||'K&R Thailand Shop'}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="no-print" style="text-align:center;padding:16px">
+  <button onclick="window.print()" style="padding:12px 32px;background:#c2185b;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700;margin-right:8px">🖨 Print / Save PDF</button>
+  <button onclick="window.close()" style="padding:12px 24px;background:#eee;border:none;border-radius:8px;cursor:pointer;font-size:13px">✕ Close</button>
+</div>
+</body></html>`;
+
+  const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+  const url  = URL.createObjectURL(blob);
+  const win  = window.open(url,'_blank');
+  if (win) setTimeout(() => URL.revokeObjectURL(url), 30000);
+  showToast('🖨 Invoice opened!');
+}
+
+async function aibSaveAsOrder() {
+  if (!_aibItems.length) { showToast('⚠️ Please add items first'); return; }
+  if (!_aibCustomer)     { showToast('⚠️ Please select a customer'); return; }
+
+  const shipping = parseFloat(document.getElementById('aib-shipping').value) || 0;
+  const now = new Date();
+  const orderNum = 'KR-' + now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '-' + Math.floor(Math.random()*900+100);
+  const itemsStr = _aibItems.map(i => `${i.product.nameEN} x${i.qty} @${i.custPrice}`).join(', ');
+  const total = _aibItems.reduce((s,i) => s + i.qty*i.custPrice, 0) + shipping;
+
+  const btn = document.querySelector('#aibModal button[onclick="aibSaveAsOrder()"]');
+  if (btn) { btn.disabled=true; btn.textContent='Saving...'; }
+
+  try {
+    const resp = await fetch(scriptURL, {
+      method:'POST', redirect:'follow',
+      headers:{'Content-Type':'text/plain'},
       body: JSON.stringify({
-        type:          'UpdateOrderStatus',
-        orderNum:      o.num,
-        status:        'confirmed',
-        confirmedDate: new Date().toLocaleDateString(),
-        discProduct:   discProdAmt,
-        discShipping:  discShipAmt,
-        grandTotal:    grandTotal,
-        invoiceNote:   note,
+        type:'Orders', orderNum,
+        name:    _aibCustomer.name,
+        phone:   _aibCustomer.phone,
+        country: '', address: '',
+        items:   itemsStr,
+        total, shipping,
+        status: 'pending',
+        customerCode: _aibCustomer.customerCode,
       })
     });
-    _updateOrdersBadge();
-    renderAdminOrders();
-  });
-}
-
-function _buildXLSX(d) {
-  const WB = XLSX.utils.book_new();
-  const ws = {};
-  let r = 0; // row index (0-based)
-
-  // helpers
-  const s = (bold, bg, color, sz, align, border) => ({
-    font: { bold:!!bold, sz:sz||11, name:'Arial', color:{rgb:color||'1a1a2e'} },
-    fill: bg ? {patternType:'solid', fgColor:{rgb:bg}} : {patternType:'none'},
-    alignment: { horizontal:align||'left', vertical:'center', wrapText:true },
-    border: border ? {
-      top:{style:'thin',color:{rgb:'E0C0D0'}}, bottom:{style:'thin',color:{rgb:'E0C0D0'}},
-      left:{style:'thin',color:{rgb:'E0C0D0'}}, right:{style:'thin',color:{rgb:'E0C0D0'}}
-    } : {}
-  });
-  const cell = (addr, v, style) => {
-    ws[addr] = { v, t: typeof v === 'number' ? 'n' : 's', s: style };
-  };
-  const numCell = (addr, v, style) => {
-    ws[addr] = { v: Number(v)||0, t:'n', s:{...style, numFmt:'#,##0.00'} };
-  };
-  const setRow = (cols) => { // cols: [{c:'A',v,style,num}]
-    cols.forEach(({c,v,style,num}) => {
-      if (num) numCell(c+(r+1), v, style);
-      else cell(c+(r+1), v, style);
-    });
-    r++;
-  };
-
-  // col widths: A=5, B=20, C=8, D=20, E=15, F=15, G=12
-  ws['!cols'] = [{wch:5},{wch:22},{wch:8},{wch:22},{wch:14},{wch:14},{wch:12}];
-
-  // ── ROW 1: Shop name (merged A1:G1) ──
-  setRow([{c:'A', v:d.shopName, style:s(true,'AD1457','FFFFFF',18,'center')}]);
-  ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:6}}];
-
-  // ── ROW 2: INVOICE title (merged) ──
-  setRow([{c:'A', v:'INVOICE', style:s(true,'FCE4EC','C2185B',14,'center')}]);
-  ws['!merges'].push({s:{r:1,c:0},e:{r:1,c:6}});
-
-  // ── ROW 3: blank ──
-  r++;
-
-  // ── ROW 4-5: Invoice No + Date ──
-  setRow([
-    {c:'A', v:'Invoice No.', style:s(true,null,'888888',10)},
-    {c:'B', v:d.invNum,      style:s(false,null,'C2185B',11)},
-    {c:'D', v:'Date',        style:s(true,null,'888888',10)},
-    {c:'E', v:d.invDate,     style:s(false,null,'1a1a2e',11)},
-  ]);
-  setRow([
-    {c:'A', v:'USD Rate',    style:s(true,null,'888888',10)},
-    {c:'B', v:`1 USD = ฿${d.usdR}`, style:s(false,null,'1a1a2e',11)},
-  ]);
-
-  r++; // blank
-
-  // ── BILL TO ──
-  setRow([{c:'A', v:'BILL TO', style:s(true,'FFF0F7','C2185B',12)}]);
-  ws['!merges'].push({s:{r:r-1,c:0},e:{r:r-1,c:6}});
-
-  setRow([
-    {c:'A', v:'Name',    style:s(true,null,'888888',10)},
-    {c:'B', v:d.cName,   style:s(false,null,'1a1a2e',11)},
-    {c:'D', v:'Phone',   style:s(true,null,'888888',10)},
-    {c:'E', v:d.cPhone,  style:s(false,null,'1a1a2e',11)},
-  ]);
-  setRow([
-    {c:'A', v:'Country', style:s(true,null,'888888',10)},
-    {c:'B', v:d.cCountry,style:s(false,null,'1a1a2e',11)},
-    {c:'D', v:'Address', style:s(true,null,'888888',10)},
-    {c:'E', v:d.cAddr,   style:s(false,null,'1a1a2e',11)},
-  ]);
-  ws['!merges'].push({s:{r:r-1,c:4},e:{r:r-1,c:6}});
-
-  r++; // blank
-
-  // ── ITEMS HEADER ──
-  const hStyle = s(true,'FFF0F7','AD1457',10,'center',true);
-  setRow([
-    {c:'A', v:'#',          style:hStyle},
-    {c:'B', v:'Product',    style:{...hStyle, alignment:{horizontal:'left'}}},
-    {c:'C', v:'Qty',        style:hStyle},
-    {c:'D', v:'Unit (฿)',   style:{...hStyle, alignment:{horizontal:'right'}}},
-    {c:'E', v:'Sub (฿)',    style:{...hStyle, alignment:{horizontal:'right'}}},
-    {c:'F', v:'Unit ($)',   style:{...hStyle, alignment:{horizontal:'right'}}},
-    {c:'G', v:'Sub ($)',    style:{...hStyle, alignment:{horizontal:'right'}}},
-  ]);
-
-  // ── ITEMS ROWS ──
-  d.items.forEach((it, idx) => {
-    const even = idx % 2 === 0;
-    const bg = even ? null : 'FFF8FC';
-    setRow([
-      {c:'A', v:idx+1,                       style:s(false,bg,null,11,'center',true)},
-      {c:'B', v:it.name,                     style:s(false,bg,null,11,'left',true)},
-      {c:'C', v:it.qty,                      style:s(false,bg,null,11,'center',true)},
-      {c:'D', v:it.price,                    style:{...s(false,bg,null,11,'right',true), numFmt:'#,##0'}, num:true},
-      {c:'E', v:it.sub,                      style:{...s(true,bg,'C2185B',11,'right',true), numFmt:'#,##0'}, num:true},
-      {c:'F', v:Number((it.price/d.usdR).toFixed(2)), style:{...s(false,bg,null,11,'right',true), numFmt:'#,##0.00'}, num:true},
-      {c:'G', v:Number((it.sub/d.usdR).toFixed(2)),   style:{...s(true,bg,'0070C0',11,'right',true), numFmt:'#,##0.00'}, num:true},
-    ]);
-  });
-
-  r++; // blank
-
-  // ── TOTALS ──
-  const tStyle  = (bold,col) => ({...s(bold,null,col||'555555',11,'right'), numFmt:'#,##0'});
-  const tLStyle = (bold,col) => s(bold,null,col||'555555',11,'left');
-
-  const addTotalRow = (lbl, thb, usd, bold, col) => {
-    setRow([
-      {c:'D', v:lbl,  style:tLStyle(bold,col)},
-      {c:'E', v:thb,  style:tStyle(bold,col), num:true},
-      {c:'F', v:'',   style:s()},
-      {c:'G', v:Number(usd), style:{...tStyle(bold,col||'0070C0'), numFmt:'#,##0.00'}, num:true},
-    ]);
-  };
-
-  addTotalRow('Products Subtotal', d.productTotal, (d.productTotal/d.usdR).toFixed(2));
-  if (d.discProdAmt > 0) addTotalRow(`Product Discount (${d.discProdT==='pct'?d.discProd+'%':'฿'+d.discProdAmt})`, -d.discProdAmt, (-d.discProdAmt/d.usdR).toFixed(2), false, 'E65100');
-  addTotalRow('Shipping Fee', d.shipping, (d.shipping/d.usdR).toFixed(2));
-  if (d.discShipAmt > 0) addTotalRow(`Shipping Discount (${d.discShipT==='pct'?d.discShip+'%':'฿'+d.discShipAmt})`, -d.discShipAmt, (-d.discShipAmt/d.usdR).toFixed(2), false, 'E65100');
-
-  // Grand Total row
-  setRow([
-    {c:'D', v:'GRAND TOTAL',      style:{...s(true,'FFF0F7','C2185B',13,'left'), border:{bottom:{style:'medium',color:{rgb:'C2185B'}}}}},
-    {c:'E', v:d.grandTotal,       style:{...s(true,'FFF0F7','C2185B',13,'right'), numFmt:'#,##0'}, num:true},
-    {c:'F', v:'',                 style:s(false,'FFF0F7')},
-    {c:'G', v:Number(d.grandUSD), style:{...s(true,'FFF0F7','0070C0',13,'right'), numFmt:'#,##0.00'}, num:true},
-  ]);
-  ws['!merges'].push({s:{r:r-1,c:3},e:{r:r-1,c:3}});
-
-  r++; // blank
-
-  // ── PAYMENT ──
-  setRow([{c:'A', v:'PAYMENT DETAILS', style:s(true,'FFF0F7','C2185B',12)}]);
-  ws['!merges'].push({s:{r:r-1,c:0},e:{r:r-1,c:6}});
-
-  setRow([
-    {c:'A', v:'Bank',         style:s(true,null,'888888',10)},
-    {c:'B', v:'KASIKORN BANK',style:s(false,null,'1a1a2e',11)},
-    {c:'D', v:'Swift Code',   style:s(true,null,'888888',10)},
-    {c:'E', v:'KASITHBK',     style:s(true,null,'1a1a2e',11)},
-  ]);
-  setRow([
-    {c:'A', v:'Account Name', style:s(true,null,'888888',10)},
-    {c:'B', v:'KHONGKHA BUMRUNGKHET', style:s(false,null,'1a1a2e',11)},
-  ]);
-  ws['!merges'].push({s:{r:r-1,c:1},e:{r:r-1,c:6}});
-  setRow([
-    {c:'A', v:'Account No.',  style:s(true,null,'888888',10)},
-    {c:'B', v:'564-24-553-05',style:s(true,null,'C62828',12)},
-  ]);
-  setRow([
-    {c:'A', v:'Line',         style:s(true,null,'888888',10)},
-    {c:'B', v:d.shopLine,     style:s(false,null,'00B900',11)},
-    {c:'D', v:'WhatsApp',     style:s(true,null,'888888',10)},
-    {c:'E', v:d.shopWA,       style:s(false,null,'25D366',11)},
-  ]);
-
-  if (d.note) {
-    r++;
-    setRow([
-      {c:'A', v:'Note',  style:s(true,null,'888888',10)},
-      {c:'B', v:d.note,  style:s(false,null,'555555',11)},
-    ]);
-    ws['!merges'].push({s:{r:r-1,c:1},e:{r:r-1,c:6}});
+    const result = await resp.text();
+    if (result === 'Order Success') {
+      // เพิ่มเข้า orders array
+      orders.push({
+        num: orderNum, date: now.toLocaleDateString(),
+        customer: _aibCustomer.name, phone: _aibCustomer.phone,
+        country:'', address:'', items: itemsStr,
+        total, totalProduct: total-shipping, shipping,
+        status:'pending',
+      });
+      showToast('✅ Order saved: ' + orderNum);
+      closeAIB();
+    } else {
+      showToast('Error: ' + result);
+      if (btn) { btn.disabled=false; btn.textContent='💾 Save as Order'; }
+    }
+  } catch(e) {
+    showToast('Save failed');
+    if (btn) { btn.disabled=false; btn.textContent='💾 Save as Order'; }
   }
-
-  r+=2;
-
-  // ── SIGNATURE ──
-  setRow([
-    {c:'E', v:'Authorized Signature', style:s(false,null,'888888',10,'center')},
-    {c:'F', v:'',style:s()}, {c:'G',v:'',style:s()},
-  ]);
-  ws['!merges'].push({s:{r:r-1,c:4},e:{r:r-1,c:6}});
-  setRow([
-    {c:'E', v:'________________________', style:s(false,null,'AAAAAA',10,'center')},
-  ]);
-  ws['!merges'].push({s:{r:r-1,c:4},e:{r:r-1,c:6}});
-  setRow([
-    {c:'E', v:d.shopName, style:s(true,null,'C2185B',10,'center')},
-  ]);
-  ws['!merges'].push({s:{r:r-1,c:4},e:{r:r-1,c:6}});
-
-  ws['!ref'] = `A1:G${r}`;
-  // row heights
-  ws['!rows'] = Array(r).fill(null).map((_, i) => {
-    if (i === 0) return {hpt:28}; // shop name
-    if (i === 1) return {hpt:22}; // invoice
-    return {hpt:18};
-  });
-
-  XLSX.utils.book_append_sheet(WB, ws, 'Invoice');
-  XLSX.writeFile(WB, `Invoice_${d.invNum}.xlsx`);
-  showToast('📊 Invoice exported!');
 }
+
 
 
 </script>
