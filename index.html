@@ -3736,8 +3736,11 @@ async function loadOrdersFromSheet() {
     renderAdminOrders();
   } catch(e) {
     console.error('Orders load failed:', e);
-    document.getElementById('adminOrdersList').innerHTML =
-      '<p style="color:red;padding:20px">Error: ' + e.message + '</p>';
+    const container = document.getElementById('adminOrdersList');
+    if (container) container.innerHTML =
+      '<p style="color:var(--muted);text-align:center;padding:40px">⏳ กำลังโหลด กรุณารอสักครู่...</p>';
+    // retry อีกครั้งหลัง 3 วิ
+    setTimeout(loadOrdersFromSheet, 3000);
   }
 }
 
@@ -4171,89 +4174,198 @@ function exportInvoiceXLSX() {
 
 function _buildXLSX(d) {
   const WB = XLSX.utils.book_new();
-  const rows = [];
+  const ws = {};
+  let r = 0; // row index (0-based)
 
-  const C = (v, bold, bg, color, sz, align) => ({
-    v, s: {
-      font: { bold:!!bold, sz:sz||11, name:'Arial', color:{rgb:color||'000000'} },
-      fill: bg ? {patternType:'solid', fgColor:{rgb:bg}} : {},
-      alignment: { horizontal:align||'left', vertical:'center', wrapText:true },
-    }
+  // helpers
+  const s = (bold, bg, color, sz, align, border) => ({
+    font: { bold:!!bold, sz:sz||11, name:'Arial', color:{rgb:color||'1a1a2e'} },
+    fill: bg ? {patternType:'solid', fgColor:{rgb:bg}} : {patternType:'none'},
+    alignment: { horizontal:align||'left', vertical:'center', wrapText:true },
+    border: border ? {
+      top:{style:'thin',color:{rgb:'E0C0D0'}}, bottom:{style:'thin',color:{rgb:'E0C0D0'}},
+      left:{style:'thin',color:{rgb:'E0C0D0'}}, right:{style:'thin',color:{rgb:'E0C0D0'}}
+    } : {}
   });
-  const N = (v, bold, color) => ({
-    v: Number(v)||0, t:'n',
-    s: { font:{bold:!!bold,sz:11,name:'Arial',color:{rgb:color||'000000'}}, numFmt:'#,##0', alignment:{horizontal:'right',vertical:'center'} }
-  });
+  const cell = (addr, v, style) => {
+    ws[addr] = { v, t: typeof v === 'number' ? 'n' : 's', s: style };
+  };
+  const numCell = (addr, v, style) => {
+    ws[addr] = { v: Number(v)||0, t:'n', s:{...style, numFmt:'#,##0.00'} };
+  };
+  const setRow = (cols) => { // cols: [{c:'A',v,style,num}]
+    cols.forEach(({c,v,style,num}) => {
+      if (num) numCell(c+(r+1), v, style);
+      else cell(c+(r+1), v, style);
+    });
+    r++;
+  };
 
-  // Title
-  rows.push([C(d.shopName, true, 'C2185B', 'FFFFFF', 16, 'center'), '', '', '', '', '', '']);
-  rows.push([C('INVOICE', true, 'FCE4EC', 'C2185B', 14, 'center'), '', '', '', C('Invoice No.', true, null, '888888'), C(d.invNum, false, null, 'C2185B'), '']);
-  rows.push([C('Date:', true, null, '888888'), C(d.invDate), '', '', C('USD Rate:', true, null, '888888'), C(`1 USD = ฿${d.usdR}`), '']);
-  rows.push([]);
+  // col widths: A=5, B=20, C=8, D=20, E=15, F=15, G=12
+  ws['!cols'] = [{wch:5},{wch:22},{wch:8},{wch:22},{wch:14},{wch:14},{wch:12}];
 
-  // Bill To
-  rows.push([C('BILL TO', true, 'FFF0F7', 'C2185B', 12), '', '', '', '', '', '']);
-  rows.push([C('Name:',    true), C(d.cName),    '', C('Phone:',   true), C(d.cPhone),   '', '']);
-  rows.push([C('Country:', true), C(d.cCountry), '', C('Address:', true), C(d.cAddr),    '', '']);
-  rows.push([]);
+  // ── ROW 1: Shop name (merged A1:G1) ──
+  setRow([{c:'A', v:d.shopName, style:s(true,'AD1457','FFFFFF',18,'center')}]);
+  ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:6}}];
 
-  // Items header
-  rows.push([
-    C('#',           true, 'FFF0F7', 'AD1457', 11, 'center'),
-    C('Product',     true, 'FFF0F7', 'AD1457', 11, 'left'),
-    C('Qty',         true, 'FFF0F7', 'AD1457', 11, 'center'),
-    C('Unit (฿)',    true, 'FFF0F7', 'AD1457', 11, 'right'),
-    C('Sub (฿)',     true, 'FFF0F7', 'AD1457', 11, 'right'),
-    C('Unit ($)',    true, 'FFF0F7', 'AD1457', 11, 'right'),
-    C('Sub ($)',     true, 'FFF0F7', 'AD1457', 11, 'right'),
+  // ── ROW 2: INVOICE title (merged) ──
+  setRow([{c:'A', v:'INVOICE', style:s(true,'FCE4EC','C2185B',14,'center')}]);
+  ws['!merges'].push({s:{r:1,c:0},e:{r:1,c:6}});
+
+  // ── ROW 3: blank ──
+  r++;
+
+  // ── ROW 4-5: Invoice No + Date ──
+  setRow([
+    {c:'A', v:'Invoice No.', style:s(true,null,'888888',10)},
+    {c:'B', v:d.invNum,      style:s(false,null,'C2185B',11)},
+    {c:'D', v:'Date',        style:s(true,null,'888888',10)},
+    {c:'E', v:d.invDate,     style:s(false,null,'1a1a2e',11)},
+  ]);
+  setRow([
+    {c:'A', v:'USD Rate',    style:s(true,null,'888888',10)},
+    {c:'B', v:`1 USD = ฿${d.usdR}`, style:s(false,null,'1a1a2e',11)},
   ]);
 
-  // Items rows
+  r++; // blank
+
+  // ── BILL TO ──
+  setRow([{c:'A', v:'BILL TO', style:s(true,'FFF0F7','C2185B',12)}]);
+  ws['!merges'].push({s:{r:r-1,c:0},e:{r:r-1,c:6}});
+
+  setRow([
+    {c:'A', v:'Name',    style:s(true,null,'888888',10)},
+    {c:'B', v:d.cName,   style:s(false,null,'1a1a2e',11)},
+    {c:'D', v:'Phone',   style:s(true,null,'888888',10)},
+    {c:'E', v:d.cPhone,  style:s(false,null,'1a1a2e',11)},
+  ]);
+  setRow([
+    {c:'A', v:'Country', style:s(true,null,'888888',10)},
+    {c:'B', v:d.cCountry,style:s(false,null,'1a1a2e',11)},
+    {c:'D', v:'Address', style:s(true,null,'888888',10)},
+    {c:'E', v:d.cAddr,   style:s(false,null,'1a1a2e',11)},
+  ]);
+  ws['!merges'].push({s:{r:r-1,c:4},e:{r:r-1,c:6}});
+
+  r++; // blank
+
+  // ── ITEMS HEADER ──
+  const hStyle = s(true,'FFF0F7','AD1457',10,'center',true);
+  setRow([
+    {c:'A', v:'#',          style:hStyle},
+    {c:'B', v:'Product',    style:{...hStyle, alignment:{horizontal:'left'}}},
+    {c:'C', v:'Qty',        style:hStyle},
+    {c:'D', v:'Unit (฿)',   style:{...hStyle, alignment:{horizontal:'right'}}},
+    {c:'E', v:'Sub (฿)',    style:{...hStyle, alignment:{horizontal:'right'}}},
+    {c:'F', v:'Unit ($)',   style:{...hStyle, alignment:{horizontal:'right'}}},
+    {c:'G', v:'Sub ($)',    style:{...hStyle, alignment:{horizontal:'right'}}},
+  ]);
+
+  // ── ITEMS ROWS ──
   d.items.forEach((it, idx) => {
-    rows.push([
-      C(idx+1, false, null, null, 11, 'center'),
-      C(it.name),
-      C(it.qty,  false, null, null, 11, 'center'),
-      N(it.price),
-      N(it.sub,   true,  'C2185B'),
-      N((it.price/d.usdR).toFixed(2)),
-      N((it.sub/d.usdR).toFixed(2), true, '0070C0'),
+    const even = idx % 2 === 0;
+    const bg = even ? null : 'FFF8FC';
+    setRow([
+      {c:'A', v:idx+1,                       style:s(false,bg,null,11,'center',true)},
+      {c:'B', v:it.name,                     style:s(false,bg,null,11,'left',true)},
+      {c:'C', v:it.qty,                      style:s(false,bg,null,11,'center',true)},
+      {c:'D', v:it.price,                    style:{...s(false,bg,null,11,'right',true), numFmt:'#,##0'}, num:true},
+      {c:'E', v:it.sub,                      style:{...s(true,bg,'C2185B',11,'right',true), numFmt:'#,##0'}, num:true},
+      {c:'F', v:Number((it.price/d.usdR).toFixed(2)), style:{...s(false,bg,null,11,'right',true), numFmt:'#,##0.00'}, num:true},
+      {c:'G', v:Number((it.sub/d.usdR).toFixed(2)),   style:{...s(true,bg,'0070C0',11,'right',true), numFmt:'#,##0.00'}, num:true},
     ]);
   });
-  rows.push([]);
 
-  // Totals
-  const tRow = (lbl, thb, usd, bold, col) => ['', C(lbl, bold, null, col||'555555'), '', '', N(thb, bold, col||'000000'), '', N(usd, bold, col||'0070C0')];
-  rows.push(tRow('Products Subtotal', d.productTotal, (d.productTotal/d.usdR).toFixed(2)));
-  if (d.discProdAmt > 0) rows.push(tRow(`Product Discount (${d.discProdT==='pct'?d.discProd+'%':'฿'+d.discProdAmt})`, -d.discProdAmt, -(d.discProdAmt/d.usdR).toFixed(2), false, 'E65100'));
-  rows.push(tRow('Shipping Fee', d.shipping, (d.shipping/d.usdR).toFixed(2)));
-  if (d.discShipAmt > 0) rows.push(tRow(`Shipping Discount (${d.discShipT==='pct'?d.discShip+'%':'฿'+d.discShipAmt})`, -d.discShipAmt, -(d.discShipAmt/d.usdR).toFixed(2), false, 'E65100'));
-  rows.push(['', C('GRAND TOTAL', true, 'FFF0F7', 'C2185B', 13), '', '', N(d.grandTotal, true, 'C2185B'), '', N(d.grandUSD, true, '0070C0')]);
-  rows.push([]);
+  r++; // blank
 
-  // Payment
-  rows.push([C('PAYMENT DETAILS', true, 'FFF0F7', 'C2185B', 12), '', '', '', '', '', '']);
-  rows.push([C('Bank:'), C('KASIKORN BANK'), '', C('Swift:'), C('KASITHBK', true), '', '']);
-  rows.push([C('Account Name:'), C('KHONGKHA BUMRUNGKHET'), '', '', '', '', '']);
-  rows.push([C('Account No.:'), C('564-24-553-05', true, null, 'C62828'), '', '', '', '', '']);
-  rows.push([C('Line:'), C(d.shopLine), '', C('WhatsApp:'), C(d.shopWA), '', '']);
-  rows.push([]);
+  // ── TOTALS ──
+  const tStyle  = (bold,col) => ({...s(bold,null,col||'555555',11,'right'), numFmt:'#,##0'});
+  const tLStyle = (bold,col) => s(bold,null,col||'555555',11,'left');
 
-  // Note
-  if (d.note) { rows.push([C('Note:', true), C(d.note), '', '', '', '', '']); rows.push([]); }
+  const addTotalRow = (lbl, thb, usd, bold, col) => {
+    setRow([
+      {c:'D', v:lbl,  style:tLStyle(bold,col)},
+      {c:'E', v:thb,  style:tStyle(bold,col), num:true},
+      {c:'F', v:'',   style:s()},
+      {c:'G', v:Number(usd), style:{...tStyle(bold,col||'0070C0'), numFmt:'#,##0.00'}, num:true},
+    ]);
+  };
 
-  // Signature
-  rows.push(['', '', '', '', C('Authorized Signature', false, null, '888888', 10, 'center'), '', '']);
-  rows.push(['', '', '', '', C('________________________', false, null, 'AAAAAA', 10, 'center'), '', '']);
-  rows.push(['', '', '', '', C(d.shopName, true, null, 'C2185B', 10, 'center'), '', '']);
+  addTotalRow('Products Subtotal', d.productTotal, (d.productTotal/d.usdR).toFixed(2));
+  if (d.discProdAmt > 0) addTotalRow(`Product Discount (${d.discProdT==='pct'?d.discProd+'%':'฿'+d.discProdAmt})`, -d.discProdAmt, (-d.discProdAmt/d.usdR).toFixed(2), false, 'E65100');
+  addTotalRow('Shipping Fee', d.shipping, (d.shipping/d.usdR).toFixed(2));
+  if (d.discShipAmt > 0) addTotalRow(`Shipping Discount (${d.discShipT==='pct'?d.discShip+'%':'฿'+d.discShipAmt})`, -d.discShipAmt, (-d.discShipAmt/d.usdR).toFixed(2), false, 'E65100');
 
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = [{wch:5},{wch:32},{wch:8},{wch:16},{wch:14},{wch:12},{wch:12}];
-  ws['!merges'] = [
-    {s:{r:0,c:0}, e:{r:0,c:6}},
-    {s:{r:1,c:0}, e:{r:1,c:3}},
-    {s:{r:4,c:0}, e:{r:4,c:6}},
-  ];
+  // Grand Total row
+  setRow([
+    {c:'D', v:'GRAND TOTAL',      style:{...s(true,'FFF0F7','C2185B',13,'left'), border:{bottom:{style:'medium',color:{rgb:'C2185B'}}}}},
+    {c:'E', v:d.grandTotal,       style:{...s(true,'FFF0F7','C2185B',13,'right'), numFmt:'#,##0'}, num:true},
+    {c:'F', v:'',                 style:s(false,'FFF0F7')},
+    {c:'G', v:Number(d.grandUSD), style:{...s(true,'FFF0F7','0070C0',13,'right'), numFmt:'#,##0.00'}, num:true},
+  ]);
+  ws['!merges'].push({s:{r:r-1,c:3},e:{r:r-1,c:3}});
+
+  r++; // blank
+
+  // ── PAYMENT ──
+  setRow([{c:'A', v:'PAYMENT DETAILS', style:s(true,'FFF0F7','C2185B',12)}]);
+  ws['!merges'].push({s:{r:r-1,c:0},e:{r:r-1,c:6}});
+
+  setRow([
+    {c:'A', v:'Bank',         style:s(true,null,'888888',10)},
+    {c:'B', v:'KASIKORN BANK',style:s(false,null,'1a1a2e',11)},
+    {c:'D', v:'Swift Code',   style:s(true,null,'888888',10)},
+    {c:'E', v:'KASITHBK',     style:s(true,null,'1a1a2e',11)},
+  ]);
+  setRow([
+    {c:'A', v:'Account Name', style:s(true,null,'888888',10)},
+    {c:'B', v:'KHONGKHA BUMRUNGKHET', style:s(false,null,'1a1a2e',11)},
+  ]);
+  ws['!merges'].push({s:{r:r-1,c:1},e:{r:r-1,c:6}});
+  setRow([
+    {c:'A', v:'Account No.',  style:s(true,null,'888888',10)},
+    {c:'B', v:'564-24-553-05',style:s(true,null,'C62828',12)},
+  ]);
+  setRow([
+    {c:'A', v:'Line',         style:s(true,null,'888888',10)},
+    {c:'B', v:d.shopLine,     style:s(false,null,'00B900',11)},
+    {c:'D', v:'WhatsApp',     style:s(true,null,'888888',10)},
+    {c:'E', v:d.shopWA,       style:s(false,null,'25D366',11)},
+  ]);
+
+  if (d.note) {
+    r++;
+    setRow([
+      {c:'A', v:'Note',  style:s(true,null,'888888',10)},
+      {c:'B', v:d.note,  style:s(false,null,'555555',11)},
+    ]);
+    ws['!merges'].push({s:{r:r-1,c:1},e:{r:r-1,c:6}});
+  }
+
+  r+=2;
+
+  // ── SIGNATURE ──
+  setRow([
+    {c:'E', v:'Authorized Signature', style:s(false,null,'888888',10,'center')},
+    {c:'F', v:'',style:s()}, {c:'G',v:'',style:s()},
+  ]);
+  ws['!merges'].push({s:{r:r-1,c:4},e:{r:r-1,c:6}});
+  setRow([
+    {c:'E', v:'________________________', style:s(false,null,'AAAAAA',10,'center')},
+  ]);
+  ws['!merges'].push({s:{r:r-1,c:4},e:{r:r-1,c:6}});
+  setRow([
+    {c:'E', v:d.shopName, style:s(true,null,'C2185B',10,'center')},
+  ]);
+  ws['!merges'].push({s:{r:r-1,c:4},e:{r:r-1,c:6}});
+
+  ws['!ref'] = `A1:G${r}`;
+  // row heights
+  ws['!rows'] = Array(r).fill(null).map((_, i) => {
+    if (i === 0) return {hpt:28}; // shop name
+    if (i === 1) return {hpt:22}; // invoice
+    return {hpt:18};
+  });
 
   XLSX.utils.book_append_sheet(WB, ws, 'Invoice');
   XLSX.writeFile(WB, `Invoice_${d.invNum}.xlsx`);
