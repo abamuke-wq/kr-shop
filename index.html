@@ -2654,6 +2654,36 @@ function saveShippingToSheet() {
 // ============================================================
 // แก้ไข 3: confirmAdminOrder — ส่ง UpdateOrderStatus ที่ถูกต้อง
 // ============================================================
+function deleteAdminOrder(i) {
+  const o = orders[i];
+  if (!o) return;
+  if (!confirm(`Delete order ${o.num}?`)) return;
+
+  fetch(scriptURL, {
+    method:   'POST',
+    redirect: 'follow',
+    headers:  { 'Content-Type': 'text/plain' },
+    body:     JSON.stringify({ type: 'DeleteOrder', orderNum: o.num })
+  })
+  .then(r => r.text())
+  .then(result => {
+    console.log('DeleteOrder:', result);
+    if (result === 'Order Deleted') {
+      orders.splice(i, 1);
+      const totalPages = Math.ceil(orders.length / _ordersPerPage);
+      if (_ordersPage >= totalPages && _ordersPage > 0) _ordersPage--;
+      renderAdminOrders();
+      showToast('🗑 Order deleted');
+    } else {
+      showToast('Delete failed: ' + result);
+    }
+  })
+  .catch(e => {
+    console.error('DeleteOrder failed:', e);
+    showToast('Delete failed');
+  });
+}
+
 function confirmAdminOrder(i) {
   orders[i].status = 'confirmed';
   _updateOrdersBadge();
@@ -2674,15 +2704,27 @@ function confirmAdminOrder(i) {
 // แก้ไข 4: renderAdminOrders (version เดียว ถูกต้อง)
 // ลบ version เดิม (บรรทัด 2753-2773) ออก แล้วใช้อันนี้แทน
 // ============================================================
+let _ordersPage = 0;
+const _ordersPerPage = 10;
+
 function renderAdminOrders() {
   const container = document.getElementById('adminOrdersList');
   if (!container) return;
   _updateOrdersBadge();
+
   if (!orders || orders.length === 0) {
     container.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px">No orders yet</p>';
     return;
   }
-  container.innerHTML = [...orders].reverse().map((o, ri) => {
+
+  const sorted     = [...orders].reverse();
+  const totalPages = Math.ceil(sorted.length / _ordersPerPage);
+  if (_ordersPage >= totalPages) _ordersPage = totalPages - 1;
+  if (_ordersPage < 0) _ordersPage = 0;
+
+  const pageOrders = sorted.slice(_ordersPage * _ordersPerPage, (_ordersPage + 1) * _ordersPerPage);
+
+  const cards = pageOrders.map(o => {
     const idx = orders.findIndex(x => x.num === o.num);
     const itemsText = typeof o.items === 'string'
       ? o.items
@@ -2691,14 +2733,14 @@ function renderAdminOrders() {
     return `
       <div style="background:white;border:1px solid #f0e0f0;border-radius:12px;padding:16px;margin-bottom:12px">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
-          <div>
+          <div style="flex:1;min-width:0">
             <div style="font-weight:700;color:var(--accent);font-size:15px">${o.num}</div>
             <div style="font-size:13px;color:#555;margin-top:2px">${o.customer} · ${o.phone}</div>
             <div style="font-size:12px;color:#888">${o.country} · ${o.address}</div>
             <div style="font-size:13px;margin-top:6px;color:#333">${itemsText}</div>
             <div style="font-size:12px;color:var(--muted);margin-top:4px">${o.date}</div>
           </div>
-          <div style="text-align:right">
+          <div style="text-align:right;flex-shrink:0">
             <div style="font-weight:700;color:var(--gold);font-size:16px">฿${(o.total||0).toLocaleString()}</div>
             <div style="margin-top:4px">
               <span style="padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;background:${isConfirmed?'#e8f5e9':'#fff3e0'};color:${isConfirmed?'#2e7d32':'#e65100'}">
@@ -2709,21 +2751,42 @@ function renderAdminOrders() {
         </div>
         <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
           <button onclick="viewOrderDetail(${idx})"
-            style="flex:1;padding:8px;background:#f5f0ff;border:1px solid var(--teal);color:var(--teal);border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif;min-width:80px">
+            style="flex:1;padding:8px;background:#f5f0ff;border:1px solid var(--teal);color:var(--teal);border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif;min-width:70px">
             🔍 Details
           </button>
           <button onclick="openInvoiceModal(${idx})"
-            style="flex:1;padding:8px;background:linear-gradient(135deg,var(--accent),var(--grad2));border:none;color:white;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif;min-width:80px">
+            style="flex:1;padding:8px;background:linear-gradient(135deg,var(--accent),var(--grad2));border:none;color:white;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif;min-width:70px">
             🧾 Invoice
           </button>
           ${!isConfirmed ? `
           <button onclick="confirmAdminOrder(${idx})"
-            style="flex:1;padding:8px;background:#e8f5e9;border:1px solid #2e7d32;color:#2e7d32;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif;min-width:80px">
+            style="flex:1;padding:8px;background:#e8f5e9;border:1px solid #2e7d32;color:#2e7d32;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif;min-width:70px">
             ✓ Confirm
           </button>` : ''}
+          <button onclick="deleteAdminOrder(${idx})"
+            style="padding:8px 12px;background:#fff0f0;border:1px solid #ffcccc;color:#c62828;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif"
+            title="Delete order">
+            🗑
+          </button>
         </div>
       </div>`;
   }).join('');
+
+  // Pagination controls
+  const pagination = totalPages > 1 ? `
+    <div style="display:flex;justify-content:center;align-items:center;gap:12px;padding:16px 0;font-family:'Nunito',sans-serif">
+      <button onclick="_ordersPage--;renderAdminOrders()" ${_ordersPage===0?'disabled':''} 
+        style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:white;cursor:pointer;font-weight:700;color:${_ordersPage===0?'#ccc':'var(--accent)'};font-family:'Nunito',sans-serif">
+        ← Prev
+      </button>
+      <span style="font-size:13px;color:var(--muted)">Page ${_ordersPage+1} / ${totalPages}</span>
+      <button onclick="_ordersPage++;renderAdminOrders()" ${_ordersPage>=totalPages-1?'disabled':''}
+        style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:white;cursor:pointer;font-weight:700;color:${_ordersPage>=totalPages-1?'#ccc':'var(--accent)'};font-family:'Nunito',sans-serif">
+        Next →
+      </button>
+    </div>` : '';
+
+  container.innerHTML = cards + pagination;
 }
 
 // ===== PRODUCT MODAL =====
@@ -3779,12 +3842,20 @@ function openInvoiceModal(i) {
   const customerName  = typeof o.customer === 'object' ? o.customer.name    : (o.customer || '-');
   const customerPhone = typeof o.customer === 'object' ? o.customer.phone   : (o.phone    || '-');
 
-  // parse items จาก string "Product x1, Product x2" หรือ array
+  // parse items — ถ้ามาจาก Sheets เป็น string ให้หาราคาจาก products array
   const itemsList = Array.isArray(o.items) && o.items.length > 0 && o.items[0].product
     ? o.items.map(({product:p, qty}) => ({ name: p.nameEN||p.nameTH||'-', qty, price: p.price||0 }))
     : String(o.items||'').split(',').map(s => s.trim()).filter(Boolean).map(s => {
         const m = s.match(/^(.+)\s+x(\d+)$/i);
-        return m ? { name: m[1].trim(), qty: parseInt(m[2])||1, price: 0 } : { name: s, qty: 1, price: 0 };
+        if (!m) return { name: s, qty: 1, price: 0 };
+        const name = m[1].trim();
+        const qty  = parseInt(m[2]) || 1;
+        // หาราคาจาก products array โดย match ชื่อ
+        const found = products.find(p =>
+          (p.nameEN && p.nameEN.toLowerCase() === name.toLowerCase()) ||
+          (p.nameTH && p.nameTH.toLowerCase() === name.toLowerCase())
+        );
+        return { name, qty, price: found ? (found.price || 0) : 0 };
       });
 
   const itemRowsHTML = itemsList.map((it, idx) => `
