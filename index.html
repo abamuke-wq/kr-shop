@@ -1159,7 +1159,10 @@ body { font-family:'Nunito',sans-serif; background:var(--g1); color:#1a1a2e; min
     <div class="admin-tabs">
       <button class="admin-tab active" onclick="showAdminSection('products',this)" data-th="สินค้า" data-en="Products">Products</button>
       <button class="admin-tab" onclick="showAdminSection('shipping',this)" data-th="ค่าขนส่ง DHL" data-en="DHL Shipping">DHL Shipping</button>
-      <button class="admin-tab" onclick="showAdminSection('orders',this)" data-th="คำสั่งซื้อ" data-en="Orders">Orders</button>
+      <button class="admin-tab" id="ordersTabBtn" onclick="showAdminSection('orders',this)" data-th="คำสั่งซื้อ" data-en="Orders" style="position:relative">
+        Orders
+        <span id="ordersBadge" style="display:none;position:absolute;top:-6px;right:-6px;background:#e74c3c;color:white;border-radius:50%;width:18px;height:18px;font-size:11px;font-weight:700;line-height:18px;text-align:center;font-family:'Nunito',sans-serif"></span>
+      </button>
       <button class="admin-tab" onclick="showAdminSection('settings',this)" data-th="ตั้งค่าร้าน" data-en="Shop Settings">Shop Settings</button>
     </div>
 
@@ -2639,11 +2642,12 @@ function saveShippingToSheet() {
 // ============================================================
 function confirmAdminOrder(i) {
   orders[i].status = 'confirmed';
+  _updateOrdersBadge();
   renderAdminOrders();
   showToast('Order confirmed ✓');
   const o = orders[i];
-  if (o) fetch(scriptURL, { method:'POST', mode:'no-cors', 
-    body: JSON.stringify({ type:'UpdateOrderStatus', orderNum: o.num, status:'confirmed' }) 
+  if (o) fetch(scriptURL, { method:'POST', mode:'no-cors',
+    body: JSON.stringify({ type:'UpdateOrderStatus', orderNum: o.num, status:'confirmed' })
   });
 }
 
@@ -2654,6 +2658,7 @@ function confirmAdminOrder(i) {
 function renderAdminOrders() {
   const container = document.getElementById('adminOrdersList');
   if (!container) return;
+  _updateOrdersBadge();
   if (!orders.length) {
     container.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px">No orders yet</p>';
     return;
@@ -3398,7 +3403,7 @@ applyLangTexts('en');
 updateRateDisplay();
 
 // GOOGLE SHEETS INTEGRATION v2 — Full Persistence
-const scriptURL = 'https://script.google.com/macros/s/AKfycbwlmUvswZ7DghNfophoo18VFjl2hjdvhv4K9ivLXspQ1WOp-ItzlleyTY9ux1WHyZZs/exec';
+const scriptURL = 'https://script.google.com/macros/s/AKfycbySDOOSS2Ae6Wy0iTiRDpfhB8_U5NBNTjBqxV2ZZYRQ9K--ncqQCUwg2agSCYRJ4dhE/exec';
 
 // ─── LOADING OVERLAY ───
 function showLoadingOverlay(show) {
@@ -3593,42 +3598,54 @@ saveUsdRate = function() {
 };
 
 // ─── LOAD ORDERS FROM SHEET ───
+// ─── LOAD ADMIN ORDERS — ดึงจาก AdminOrders sheet (ถาวร) ───
 async function loadOrdersFromSheet() {
   try {
-    const resp = await fetch(scriptURL + '?type=orders&t=' + Date.now());
+    // Step 1: sync Orders → AdminOrders ผ่าน GET (รอผลได้)
+    await fetch(scriptURL + '?type=syncAdminOrders&t=' + Date.now());
+
+    // Step 2: ดึงจาก AdminOrders
+    const resp = await fetch(scriptURL + '?type=adminOrders&t=' + Date.now());
     const data = await resp.json();
 
     if (!Array.isArray(data) || data.length === 0) {
       orders = [];
-      if (typeof renderAdminOrders === 'function') renderAdminOrders();
-      return;
-    }
-
-    orders = data
-      .filter(o => o && (o.orderNum || o.OrderNum)) // กรองเฉพาะแถวที่มีเลขออเดอร์
-      .map(o => {
-        // Sheets header เป็น lowercase: date, orderNum, name, phone, items, total, status, country, address, shipping
-        const rawStatus = (o.status || o.Status || 'pending').toString().trim();
-        return {
-          num:          o.orderNum  || o.OrderNum  || '',
-          date:         o.date      || o.Date      || '',
-          customer:     o.name      || o.Name      || '-',
-          phone:        o.phone     || o.Phone     || '-',
-          country:      o.country   || o.Country   || '',
-          address:      o.address   || o.Address   || '',
-          items:        parseOrderItems(o.items    || o.Items),
-          total:        parseFloat(o.total    || o.Total)    || 0,
-          totalProduct: parseFloat(o.total    || o.Total)    || 0,
-          shipping:     parseFloat(o.shipping || o.Shipping) || 0,
+    } else {
+      orders = data
+        .filter(o => o && o.orderNum)
+        .map(o => ({
+          num:          o.orderNum || '',
+          date:         o.date     || '',
+          customer:     o.name     || '-',
+          phone:        o.phone    || '-',
+          country:      o.country  || '',
+          address:      o.address  || '',
+          items:        parseOrderItems(o.items),
+          total:        parseFloat(o.total)    || 0,
+          totalProduct: parseFloat(o.total)    || 0,
+          shipping:     parseFloat(o.shipping) || 0,
           box:          null,
-          status:       _normalizeStatus(rawStatus),
-        };
-      });
-
+          status:       _normalizeStatus(o.status || 'pending'),
+        }));
+    }
+    _updateOrdersBadge();
     if (typeof renderAdminOrders === 'function') renderAdminOrders();
 
   } catch(e) {
-    console.error('โหลดออร์เดอร์ไม่สำเร็จ:', e);
+    console.error('Orders load failed:', e);
+  }
+}
+
+// ─── badge helper ───
+function _updateOrdersBadge() {
+  const badge = document.getElementById('ordersBadge');
+  if (!badge) return;
+  const pending = orders.filter(o => o.status === 'pending').length;
+  if (pending > 0) {
+    badge.textContent = pending > 99 ? '99+' : pending;
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
   }
 }
 
@@ -3761,9 +3778,9 @@ function openInvoiceModal(i) {
 
   const el = document.createElement('div');
   el.id = 'invoiceModal';
-  el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9500;overflow-y:auto;backdrop-filter:blur(6px);-webkit-overflow-scrolling:touch';
+  el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9500;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;backdrop-filter:blur(6px);padding:0';
   el.innerHTML = `
-    <div style="background:white;border-radius:0;width:100%;min-height:100vh;box-shadow:none;box-sizing:border-box">
+    <div style="background:white;border-radius:0 0 20px 20px;width:100%;max-width:600px;box-shadow:0 8px 40px rgba(0,0,0,0.3);box-sizing:border-box;min-height:auto">
       <div style="background:linear-gradient(135deg,var(--grad1),var(--grad2));padding:18px 20px;border-radius:20px 20px 0 0;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:1">
         <div>
           <div style="font-family:'Playfair Display',serif;font-size:18px;color:var(--gold)">🧾 Create Invoice</div>
@@ -3885,8 +3902,7 @@ function closeInvoiceModal() {
   const el = document.getElementById('invoiceModal');
   if (el) el.remove();
   _invoiceOrderIdx = null;
-  // reload orders จาก Sheets แล้ว render ใหม่
-  loadOrdersFromSheet().then(() => renderAdminOrders());
+  renderAdminOrders();
 }
 
 function recalcInvoice() {
