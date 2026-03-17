@@ -2682,20 +2682,48 @@ function renderAdminOrders() {
     container.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px">No orders yet</p>';
     return;
   }
-  container.innerHTML = [...orders].reverse().map(o => `
-    <div style="background:white;border:1px solid #f0e0f0;border-radius:12px;padding:16px;margin-bottom:12px">
-      <div style="font-weight:700;color:var(--accent)">${o.num}</div>
-      <div style="font-size:13px;color:#555;margin-top:4px">${o.customer} · ${o.phone}</div>
-      <div style="font-size:13px;color:#555">${o.country} · ${o.address}</div>
-      <div style="font-size:13px;margin-top:6px">${typeof o.items === 'string' ? o.items : (o.items||[]).map(i=>i.product?(i.product.nameEN||i.product.nameTH)+' x'+i.qty:i).join(', ')}</div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
-        <span style="font-size:13px;color:var(--muted)">${o.date}</span>
-        <span style="font-weight:700;color:var(--gold)">฿${(o.total||0).toLocaleString()}</span>
-        <span style="padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700;background:${o.status==='confirmed'?'#e8f5e9':'#fff3e0'};color:${o.status==='confirmed'?'#2e7d32':'#e65100'}">
-          ${o.status==='confirmed'?'✓ Confirmed':'⏳ Pending'}
-        </span>
-      </div>
-    </div>`).join('');
+  container.innerHTML = [...orders].reverse().map((o, ri) => {
+    const idx = orders.findIndex(x => x.num === o.num);
+    const itemsText = typeof o.items === 'string'
+      ? o.items
+      : (o.items||[]).map(i => i.product ? (i.product.nameEN||i.product.nameTH)+' x'+i.qty : String(i)).join(', ');
+    const isConfirmed = o.status === 'confirmed';
+    return `
+      <div style="background:white;border:1px solid #f0e0f0;border-radius:12px;padding:16px;margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+          <div>
+            <div style="font-weight:700;color:var(--accent);font-size:15px">${o.num}</div>
+            <div style="font-size:13px;color:#555;margin-top:2px">${o.customer} · ${o.phone}</div>
+            <div style="font-size:12px;color:#888">${o.country} · ${o.address}</div>
+            <div style="font-size:13px;margin-top:6px;color:#333">${itemsText}</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px">${o.date}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-weight:700;color:var(--gold);font-size:16px">฿${(o.total||0).toLocaleString()}</div>
+            <div style="margin-top:4px">
+              <span style="padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;background:${isConfirmed?'#e8f5e9':'#fff3e0'};color:${isConfirmed?'#2e7d32':'#e65100'}">
+                ${isConfirmed ? '✓ Confirmed' : '⏳ Pending'}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+          <button onclick="viewOrderDetail(${idx})"
+            style="flex:1;padding:8px;background:#f5f0ff;border:1px solid var(--teal);color:var(--teal);border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif;min-width:80px">
+            🔍 Details
+          </button>
+          <button onclick="openInvoiceModal(${idx})"
+            style="flex:1;padding:8px;background:linear-gradient(135deg,var(--accent),var(--grad2));border:none;color:white;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif;min-width:80px">
+            🧾 Invoice
+          </button>
+          ${!isConfirmed ? `
+          <button onclick="confirmAdminOrder(${idx})"
+            style="flex:1;padding:8px;background:#e8f5e9;border:1px solid #2e7d32;color:#2e7d32;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif;min-width:80px">
+            ✓ Confirm
+          </button>` : ''}
+        </div>
+      </div>`;
+  }).join('');
 }
 
 // ===== PRODUCT MODAL =====
