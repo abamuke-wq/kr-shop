@@ -3341,15 +3341,48 @@ function processAndResizeImage(file) {
       canvas.width = w; canvas.height = h;
       canvas.getContext('2d').drawImage(img, 0, 0, w, h);
       const base64 = canvas.toDataURL('image/jpeg', 0.75);
+      // แสดง preview ชั่วคราว
       currentImageData = base64;
       currentImageURL  = null;
       showImagePreview(base64, file.name);
-      document.getElementById('imageFileName').textContent = '✅ ' + file.name + ' (' + Math.round(base64.length/1024) + ' KB)';
+      document.getElementById('imageFileName').textContent = '⏳ กำลังอัปโหลดไป Google Drive...';
+      // อัปโหลดไป Google Drive ผ่าน Apps Script
+      uploadImageToDrive(base64, file.name);
     };
     img.onerror = function() { showToast('ไม่สามารถอ่านรูปได้ กรุณาลองใหม่'); };
     img.src = e.target.result;
   };
   reader.readAsDataURL(file);
+}
+
+async function uploadImageToDrive(base64Data, fileName) {
+  try {
+    document.getElementById('imageFileName').textContent = '⏳ กำลังอัปโหลด...';
+    const resp = await fetch(scriptURL, {
+      method: 'POST',
+      body: JSON.stringify({ type: 'UploadImage', imageData: base64Data, fileName: fileName || 'product.jpg' })
+    });
+    const text = await resp.text();
+    let result;
+    try { result = JSON.parse(text); } catch(e) { result = null; }
+    if (result && result.url) {
+      currentImageURL  = result.url;
+      currentImageData = null;
+      document.getElementById('imageFileName').textContent = '✅ อัปโหลดสำเร็จ!';
+      document.getElementById('previewImg').src = currentImageURL;
+      showToast('✅ อัปโหลดรูปสำเร็จ');
+    } else {
+      // fallback: ใช้ base64 แทน (รูปจะอยู่ชั่วคราว)
+      currentImageData = base64Data;
+      currentImageURL  = null;
+      document.getElementById('imageFileName').textContent = '⚠️ Drive ไม่ตอบ — ใช้ base64 แทน';
+    }
+  } catch(err) {
+    console.error('Upload error:', err);
+    currentImageData = base64Data;
+    currentImageURL  = null;
+    document.getElementById('imageFileName').textContent = '⚠️ Upload failed — ใช้ base64 แทน';
+  }
 }
 
 function handleImageUpload(input) {
@@ -3406,7 +3439,7 @@ function saveProduct() {
     status:    document.getElementById('p-status').value,
     descTH:    document.getElementById('p-descTH').value.trim(),
     descEN:    document.getElementById('p-descEN').value.trim(),
-    imageData: currentImageData !== null ? currentImageData : (editingProductId ? (products.find(p=>p.id===editingProductId)||{}).imageData||null : null),
+    imageData: currentImageURL || currentImageData || (editingProductId ? (products.find(p=>p.id===editingProductId)||{}).imageData||null : null),
   };
 
   if(!data.nameTH||!data.nameEN||!data.price||!data.weight) {
@@ -4009,7 +4042,7 @@ applyLangTexts('en');
 updateRateDisplay();
 
 // GOOGLE SHEETS INTEGRATION v2 — Full Persistence
-const scriptURL = 'https://script.google.com/macros/s/AKfycbz86EpJEqOFTButaPt4rr7FYvPjurtoofdYQoQjwLPRKFHS7CSYNpIG41CAOr5XyZ-4/exec';
+const scriptURL = 'https://script.google.com/macros/s/AKfycbyJOkyqXL3lJ0S13PKEgbrYmgOQpZp9IdAmLtknsWGpX-1mj6ZntZwU3MU2YZb0n15_/exec';
 
 // ─── LOADING OVERLAY ───
 function showLoadingOverlay(show) {
@@ -4052,7 +4085,7 @@ async function loadProductsFromSheet() {
         status:    p.status   || 'active',
         descTH:    p.descTH   || '',
         descEN:    p.descEN   || '',
-        imageData: p.imageData || null
+        imageData: p.imageData || null  // Drive URL หรือ base64
       }));
       
       renderProducts(); // วาดรายการสินค้าใหม่หน้าลูกค้า
