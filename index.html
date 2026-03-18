@@ -915,7 +915,7 @@ body { font-family:'Nunito',sans-serif; background:var(--g1); color:#1a1a2e; min
       <!-- ชื่อ (required ถ้าไม่มีโค้ด) -->
       <div class="form-group" id="loginNameGroup">
         <label class="form-label" data-th="ชื่อของคุณ" data-en="Your Name">Your Name</label>
-        <input type="text" id="loginName" class="form-input" placeholder="e.g. Name Surname">
+        <input type="text" id="loginName" class="form-input" placeholder="e.g. Name surname">
       </div>
 
       <!-- เบอร์โทร -->
@@ -930,7 +930,7 @@ body { font-family:'Nunito',sans-serif; background:var(--g1); color:#1a1a2e; min
           <span data-th="รหัสลูกค้า (ถ้ามี)" data-en="Customer Code (optional)">Customer Code (optional)</span>
           <span style="font-size:10px;background:#e8f5e9;color:#2e7d32;padding:1px 6px;border-radius:10px;font-weight:700">Special price</span>
         </label>
-        <input type="text" id="loginCode" class="form-input" placeholder="e.g. KR×××××"
+        <input type="text" id="loginCode" class="form-input" placeholder="e.g. KR00000"
           style="text-transform:uppercase;letter-spacing:2px;font-weight:700"
           oninput="onLoginCodeInput(this.value)">
         <div id="loginCodeHint" style="display:none;font-size:12px;margin-top:4px;padding:6px 10px;border-radius:8px"></div>
@@ -1512,9 +1512,34 @@ body { font-family:'Nunito',sans-serif; background:var(--g1); color:#1a1a2e; min
     </div>
   </div>
 </div>
+
+<!-- ===== ADDRESS POPUP ===== -->
+<!-- ===== DESTINATION COUNTRY PICKER ===== -->
+<div id="destPickerOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:99000;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(6px)"
+  onclick="if(event.target===this)closeDestPicker()">
+  <div style="background:white;border:1px solid var(--border);border-radius:20px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,0.5)">
+    <div style="background:linear-gradient(135deg,var(--grad1),var(--grad2));padding:18px 24px;border-radius:20px 20px 0 0;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:1">
+      <div style="font-family:'Playfair Display',serif;font-size:18px;color:var(--gold)">🌍 <span data-th="เลือกประเทศปลายทาง" data-en="Destination Country">Destination Country</span></div>
+      <button onclick="closeDestPicker()" style="background:rgba(255,255,255,0.15);border:none;color:white;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;font-weight:700">✕</button>
+    </div>
+    <div style="padding:20px">
+      <input type="text" id="destCountrySearch" oninput="renderDestCountries(this.value)"
+        placeholder="🔍 Search country..."
+        style="width:100%;padding:10px 14px;background:white;border:1.5px solid var(--border);border-radius:10px;color:#1a1a2e;font-family:'Nunito',sans-serif;font-size:13px;outline:none;margin-bottom:14px;box-sizing:border-box">
+
+      <!-- Zone tabs -->
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px" id="destZoneTabs"></div>
+
+      <div id="destCountryList" style="display:flex;flex-direction:column;gap:6px;max-height:380px;overflow-y:auto"></div>
+
+      <div style="margin-top:14px;padding:12px;background:rgba(243,156,18,0.1);border:1px solid rgba(243,156,18,0.3);border-radius:10px;font-size:12px;color:var(--warning)">
+        💡 <span data-th="ถ้าประเทศของคุณไม่อยู่ใน list กรุณาติดต่อร้านค้าเพื่อสอบถามค่าขนส่ง" data-en="If your country is not in the list, please contact the shop for shipping rates">If your country is not in the list, please contact the shop for shipping rates</span>
+      </div>
+    </div>
+  </div>
 </div>
 
-<!-- ===== ADDRESS POPUP ===== --><div class="addr-overlay" id="addrOverlay">
+<div class="addr-overlay" id="addrOverlay">
   <div class="addr-modal">
     <div class="addr-header">
       <div class="addr-header-title">📫 <span data-th="ที่อยู่จัดส่ง" data-en="Shipping Address">Shipping Address</span></div>
@@ -1587,31 +1612,6 @@ body { font-family:'Nunito',sans-serif; background:var(--g1); color:#1a1a2e; min
       </div>
 
       <div class="addr-nav" id="addrNav"></div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== DESTINATION COUNTRY PICKER ===== -->
-<div id="destPickerOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:99000;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(6px)"
-  onclick="if(event.target===this)closeDestPicker()">
-  <div style="background:white;border:1px solid var(--border);border-radius:20px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,0.5)">
-    <div style="background:linear-gradient(135deg,var(--grad1),var(--grad2));padding:18px 24px;border-radius:20px 20px 0 0;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:1">
-      <div style="font-family:'Playfair Display',serif;font-size:18px;color:var(--gold)">🌍 <span data-th="เลือกประเทศปลายทาง" data-en="Destination Country">Destination Country</span></div>
-      <button onclick="closeDestPicker()" style="background:rgba(255,255,255,0.15);border:none;color:white;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;font-weight:700">✕</button>
-    </div>
-    <div style="padding:20px">
-      <input type="text" id="destCountrySearch" oninput="renderDestCountries(this.value)"
-        placeholder="🔍 Search country..."
-        style="width:100%;padding:10px 14px;background:white;border:1.5px solid var(--border);border-radius:10px;color:#1a1a2e;font-family:'Nunito',sans-serif;font-size:13px;outline:none;margin-bottom:14px;box-sizing:border-box">
-
-      <!-- Zone tabs -->
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px" id="destZoneTabs"></div>
-
-      <div id="destCountryList" style="display:flex;flex-direction:column;gap:6px;max-height:380px;overflow-y:auto"></div>
-
-      <div style="margin-top:14px;padding:12px;background:rgba(243,156,18,0.1);border:1px solid rgba(243,156,18,0.3);border-radius:10px;font-size:12px;color:var(--warning)">
-        💡 <span data-th="ถ้าประเทศของคุณไม่อยู่ใน list กรุณาติดต่อร้านค้าเพื่อสอบถามค่าขนส่ง" data-en="If your country is not in the list, please contact the shop for shipping rates">If your country is not in the list, please contact the shop for shipping rates</span>
-      </div>
     </div>
   </div>
 </div>
@@ -4028,7 +4028,7 @@ applyLangTexts('en');
 updateRateDisplay();
 
 // GOOGLE SHEETS INTEGRATION v2 — Full Persistence
-const scriptURL = 'https://script.google.com/macros/s/AKfycbzNp8TFYBlT7hMajKEyE2ZV55bNCxbYaDiO1jjyN0qZBnXf4-Yp0HV9JNrSutHMQsoM/exec';
+const scriptURL = 'https://script.google.com/macros/s/AKfycbz_EWQcYBphnvYEVd8lbxmAINlePQ4Gu73tyoY5fxSTBmqI1KtcdPr_AVYleXzxDBM0/exec';
 
 // ─── LOADING OVERLAY ───
 function showLoadingOverlay(show) {
@@ -4300,10 +4300,24 @@ function viewOrderDetail(i) {
   const customerAddress = typeof o.customer === 'object' ? o.customer.address : (o.address  || '');
 
   const box = o.box ? DHL_BOXES.find(b=>b.num===o.box) : null;
-  const rows = (o.items||[]).map(({product:p,qty},idx) => {
-    const nm = p?(p.nameEN||p.nameTH):'?';
-    const em = p?(p.emoji||''):'';
-    const pr = p?(p.price||0):0;
+  // รองรับ items ทั้ง array (local) และ string (จาก Sheets)
+  const parsedItems = Array.isArray(o.items) && o.items.length>0 && o.items[0] && o.items[0].product
+    ? o.items.map(({product:p,qty}) => ({
+        name: p?(p.nameEN||p.nameTH||'-'):'-',
+        emoji: p?(p.emoji||'📦'):'📦',
+        qty: qty||1, price: p?(p.price||0):0
+      }))
+    : String(o.items||'').split(',').map(s=>s.trim()).filter(Boolean).map(s => {
+        const m2 = s.match(/^(.+)\s+x(\d+)\s+@(\d+)$/i);
+        const m1 = s.match(/^(.+)\s+x(\d+)$/i);
+        const name = m2?m2[1].trim():(m1?m1[1].trim():s);
+        const qty  = m2?parseInt(m2[2]):(m1?parseInt(m1[2]):1);
+        const price = m2?parseFloat(m2[3]):0;
+        const found = products.find(p=>(p.nameEN||'').toLowerCase()===name.toLowerCase()||(p.nameTH||'')===name);
+        return { name, emoji:found?found.emoji||'📦':'📦', qty:qty||1, price:price||found?.price||0 };
+      });
+
+  const rows = parsedItems.map(({name:nm,emoji:em,qty,price:pr},idx) => {
     return '<tr>'
       +'<td style="padding:9px 12px;border-bottom:1px solid rgba(214,51,132,0.08);color:var(--muted);font-size:13px">'+(idx+1)+'</td>'
       +'<td style="padding:9px 12px;border-bottom:1px solid rgba(214,51,132,0.08);font-size:13px;font-weight:600">'+em+' '+nm+'</td>'
