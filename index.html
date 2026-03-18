@@ -3331,55 +3331,35 @@ function openProductModal(id=null) {
 }
 function closeProductModal() { document.getElementById('productModal').classList.remove('open'); resetImageUpload(); }
 
-// ===== IMAGE UPLOAD — Google Drive =====
-let currentImageData = null;   // base64 ชั่วคราวก่อนอัปโหลด
-let currentImageURL  = null;   // Drive URL หลังอัปโหลดสำเร็จ
+// ===== IMAGE UPLOAD — Base64 Local =====
+let currentImageData = null;
+let currentImageURL  = null;
 
 function processAndResizeImage(file) {
+  if(!file) return;
+  if(file.size > 8 * 1024 * 1024) { showToast('รูปใหญ่เกิน 8MB กรุณาเลือกรูปใหม่'); return; }
   const reader = new FileReader();
   reader.onload = function(e) {
     const img = new Image();
     img.onload = function() {
+      // Resize to max 800px
       const MAX = 800;
       let w = img.width, h = img.height;
-      if (w > h) { if (w > MAX) { h *= MAX/w; w = MAX; } }
-      else       { if (h > MAX) { w *= MAX/h; h = MAX; } }
+      if (w > h) { if (w > MAX) { h = Math.round(h * MAX/w); w = MAX; } }
+      else       { if (h > MAX) { w = Math.round(w * MAX/h); h = MAX; } }
       const canvas = document.createElement('canvas');
       canvas.width = w; canvas.height = h;
       canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      const base64 = canvas.toDataURL('image/jpeg', 0.7);
-      // แสดง preview ชั่วคราวด้วย base64 ก่อน
+      const base64 = canvas.toDataURL('image/jpeg', 0.75);
       currentImageData = base64;
       currentImageURL  = null;
       showImagePreview(base64, file.name);
-      document.getElementById('imageFileName').textContent = '⏳ กำลังอัปโหลดไป Google Drive...';
-      // อัปโหลดไป Drive ผ่าน Apps Script
-      uploadImageToDrive(base64, file.name);
+      document.getElementById('imageFileName').textContent = '✅ ' + file.name + ' (' + Math.round(base64.length/1024) + ' KB)';
     };
+    img.onerror = function() { showToast('ไม่สามารถอ่านรูปได้ กรุณาลองใหม่'); };
     img.src = e.target.result;
   };
   reader.readAsDataURL(file);
-}
-
-async function uploadImageToDrive(base64Data, fileName) {
-  try {
-    const resp = await fetch(scriptURL, {
-      method: 'POST',
-      body: JSON.stringify({ type: 'UploadImage', imageData: base64Data, fileName: fileName })
-    });
-    const result = await resp.json();
-    if (result && result.url) {
-      currentImageURL  = result.url;
-      currentImageData = null;
-      document.getElementById('imageFileName').textContent = '✅ อัปโหลด Drive สำเร็จ';
-      document.getElementById('previewImg').src = currentImageURL;
-    } else {
-      document.getElementById('imageFileName').textContent = '❌ อัปโหลดไม่สำเร็จ ลองใหม่';
-    }
-  } catch(err) {
-    console.error('Drive upload error:', err);
-    document.getElementById('imageFileName').textContent = '❌ อัปโหลดไม่สำเร็จ';
-  }
 }
 
 function handleImageUpload(input) {
