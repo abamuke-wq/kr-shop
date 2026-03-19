@@ -1278,6 +1278,21 @@ body { font-family:'Nunito',sans-serif; background:var(--g1); color:#1a1a2e; min
         <div class="admin-title" data-th="จัดการสินค้า" data-en="Manage Products">Manage Products</div>
         <button class="add-btn-admin" onclick="openProductModal()">+ <span data-th="เพิ่มสินค้า" data-en="Add Product">Add Product</span></button>
       </div>
+
+      <!-- Search + Category Filter -->
+      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
+        <div style="flex:1;min-width:180px;position:relative">
+          <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%)">🔍</span>
+          <input id="adminProdSearch" type="text" placeholder="Search product..."
+            oninput="_adminProdPage=0;renderAdminProducts()"
+            style="width:100%;padding:8px 10px 8px 32px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:13px;outline:none;box-sizing:border-box">
+        </div>
+        <div id="adminCatTabs" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+        <button onclick="document.getElementById('adminProdSearch').value='';_adminProdPage=0;_adminActiveCat='All';renderAdminProducts()"
+          style="padding:7px 12px;background:#f5f0f5;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;color:var(--muted);font-family:'Nunito',sans-serif">✕</button>
+      </div>
+      <div id="adminProdResultInfo" style="font-size:12px;color:var(--muted);margin-bottom:6px"></div>
+
       <div class="admin-table-wrap">
         <table class="admin-table">
           <thead>
@@ -1286,6 +1301,7 @@ body { font-family:'Nunito',sans-serif; background:var(--g1); color:#1a1a2e; min
               <th data-th="ชื่อสินค้า" data-en="Product">Product</th>
               <th data-th="หมวดหมู่" data-en="Category">Category</th>
               <th data-th="ราคา" data-en="Price">Price</th>
+              <th>Margin</th>
               <th data-th="น้ำหนัก(g)" data-en="Weight(g)">Weight(g)</th>
               <th data-th="ขนาด(cm)" data-en="Size(cm)">Size W×L×H</th>
               <th data-th="สต็อก" data-en="Stock">Stock</th>
@@ -1294,6 +1310,14 @@ body { font-family:'Nunito',sans-serif; background:var(--g1); color:#1a1a2e; min
           </thead>
           <tbody id="adminProductsTable"></tbody>
         </table>
+      </div>
+      <!-- Pagination -->
+      <div id="adminProdPagination" style="display:none;justify-content:center;align-items:center;gap:12px;padding:14px 0;font-family:'Nunito',sans-serif">
+        <button onclick="_adminProdPage--;renderAdminProducts()" id="adminProdPrev"
+          style="padding:7px 16px;border-radius:8px;border:1px solid var(--border);background:white;cursor:pointer;font-weight:700;color:var(--accent);font-family:'Nunito',sans-serif">← Prev</button>
+        <span id="adminProdPageInfo" style="font-size:13px;color:var(--muted)"></span>
+        <button onclick="_adminProdPage++;renderAdminProducts()" id="adminProdNext"
+          style="padding:7px 16px;border-radius:8px;border:1px solid var(--border);background:white;cursor:pointer;font-weight:700;color:var(--accent);font-family:'Nunito',sans-serif">Next →</button>
       </div>
     </div>
 
@@ -3120,8 +3144,50 @@ function showAdminSection(s, btn) {
   if(s==='customers') loadCustomersFromSheet().then(()=>renderCustomersList());
 }
 
+let _adminProdPage = 0;
+const _adminProdPerPage = 12;
+let _adminActiveCat = 'All';
+
+function _renderAdminCatTabs() {
+  const tabs = document.getElementById('adminCatTabs');
+  if (!tabs) return;
+  const cats = ['All', ...new Set(products.map(p=>p.category).filter(Boolean))];
+  tabs.innerHTML = cats.map(c => {
+    const active = c === _adminActiveCat;
+    return `<button onclick="_adminActiveCat='${c}';_adminProdPage=0;renderAdminProducts()"
+      style="padding:5px 12px;border-radius:20px;border:1.5px solid ${active?'var(--accent)':'var(--border)'};
+      background:${active?'var(--accent)':'white'};color:${active?'white':'#555'};
+      cursor:pointer;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif">${c}</button>`;
+  }).join('');
+}
+
 function renderAdminProducts() {
-  document.getElementById('adminProductsTable').innerHTML = products.map(p => {
+  _renderAdminCatTabs();
+
+  const q = (document.getElementById('adminProdSearch')?.value || '').toLowerCase().trim();
+
+  let filtered = [...products];
+  if (_adminActiveCat !== 'All') filtered = filtered.filter(p => p.category === _adminActiveCat);
+  if (q) filtered = filtered.filter(p =>
+    (p.nameEN||'').toLowerCase().includes(q) ||
+    (p.nameTH||'').toLowerCase().includes(q) ||
+    (p.category||'').toLowerCase().includes(q)
+  );
+
+  // Result info
+  const ri = document.getElementById('adminProdResultInfo');
+  if (ri) {
+    ri.textContent = (q || _adminActiveCat !== 'All')
+      ? `Found ${filtered.length} of ${products.length} products`
+      : `${products.length} products total`;
+  }
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / _adminProdPerPage));
+  if (_adminProdPage >= totalPages) _adminProdPage = totalPages - 1;
+  if (_adminProdPage < 0) _adminProdPage = 0;
+  const pageItems = filtered.slice(_adminProdPage * _adminProdPerPage, (_adminProdPage + 1) * _adminProdPerPage);
+
+  document.getElementById('adminProductsTable').innerHTML = pageItems.map(p => {
     const name   = lang==='th' ? p.nameTH : p.nameEN;
     const cost   = p.cost || 0;
     const margin = cost > 0 ? Math.round(((p.price - cost) / p.price) * 100) : null;
@@ -3133,7 +3199,7 @@ function renderAdminProducts() {
       <td><span style="background:rgba(0,180,216,0.15);color:var(--teal);padding:3px 8px;border-radius:8px;font-size:11px;font-weight:700">${p.category}</span></td>
       <td>
         <div style="color:var(--gold);font-weight:700">฿${p.price.toLocaleString()}</div>
-        ${cost>0?`<div style="font-size:11px;color:#888">Cost: ฿${cost.toLocaleString()}</div>`:'<div style="font-size:11px;color:#ccc">No cost</div>'}
+        ${cost>0?`<div style="font-size:11px;color:#888">Cost: ฿${cost.toLocaleString()}</div>`:'<div style="font-size:11px;color:#ccc">—</div>'}
       </td>
       <td>
         ${margin!==null
@@ -3148,7 +3214,17 @@ function renderAdminProducts() {
         <button class="del-btn-sm" onclick="deleteProduct(${p.id})">Del</button>
       </td>
     </tr>`;
-  }).join('');
+  }).join('') || `<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--muted)">No products found</td></tr>`;
+
+  // Pagination
+  const pagDiv = document.getElementById('adminProdPagination');
+  const pgInfo = document.getElementById('adminProdPageInfo');
+  const prev   = document.getElementById('adminProdPrev');
+  const next   = document.getElementById('adminProdNext');
+  if (pagDiv) pagDiv.style.display = totalPages > 1 ? 'flex' : 'none';
+  if (pgInfo) pgInfo.textContent = `Page ${_adminProdPage+1} / ${totalPages}`;
+  if (prev)   { prev.disabled = _adminProdPage===0; prev.style.opacity = _adminProdPage===0?'0.3':'1'; }
+  if (next)   { next.disabled = _adminProdPage>=totalPages-1; next.style.opacity = _adminProdPage>=totalPages-1?'0.3':'1'; }
 }
 
 // ─── 1. ตัวแปรควบคุมหน้าสำหรับ ADMIN ORDERS ───
