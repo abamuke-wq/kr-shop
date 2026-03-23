@@ -5019,7 +5019,6 @@ async function apiPost(payload) {
     const resp = await fetch(scriptURL, {
       method:   'POST',
       redirect: 'follow',
-      headers:  { 'Content-Type': 'text/plain;charset=utf-8' },
       body:     JSON.stringify({ apiKey: API_KEY, ...payload })
     });
     const text = await resp.text();
@@ -5043,7 +5042,7 @@ async function apiGet(params) {
   }
 }
 // GOOGLE SHEETS INTEGRATION v2 — Full Persistence
-const scriptURL = 'https://script.google.com/macros/s/AKfycbzR4zM4DZgLVG1xThZzbibDTC1fzPu5c2RHZAXPZ-HNpAUC9n6fsLSUkYfdqnMH09e-/exec';
+const scriptURL = 'https://script.google.com/macros/s/AKfycbz6EhLsUN-xRdSvarjfHd5P-4D2YcOlgGQ13kNwNmxn3cK15v7HEm95oSY9vlSqe052/exec';
 const API_KEY = 'KR_SHOP_2026_SECRET_KEY_CHANGE_ME26'; //  Code_Secured.gs
 
 // ─── LOADING OVERLAY ───
@@ -5101,37 +5100,33 @@ async function loadProductsFromSheet() {
 
 async function saveOrderToSheet(d) {
   try {
-    // บันทึก items พร้อมราคาพิเศษ เช่น "Liquid Soap x1 @180, Alada x2 @150"
     const itemsStr = d.items.map(i => {
       const price = i.custPrice || i.product.price;
       return (i.product.nameEN || i.product.nameTH) + ' x' + i.qty + ' @' + price;
     }).join(', ');
 
-    const resp = await fetch(scriptURL, {
-      method:   'POST',
-      redirect: 'follow',
-      headers:  { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({
-        apiKey: API_KEY,
-        type:         'Orders',
-        orderNum:     d.orderNum,
-        name:         d.customer.name,
-        phone:        d.customer.phone,
-        country:      d.customer.country  || '',
-        address:      d.customer.address  || '',
-        items:        itemsStr,
-        total:        d.total,
-        shipping:     d.shipping,
-        status:       'pending',
-        customerCode: d.customer.customerCode || '',
-      })
+    const result = await apiPost({
+      type:         'Orders',
+      orderNum:     d.orderNum,
+      name:         d.customer.name,
+      phone:        d.customer.phone,
+      country:      d.customer.country  || '',
+      address:      d.customer.address  || '',
+      items:        itemsStr,
+      total:        d.total,
+      shipping:     d.shipping || 0,
+      customerCode: d.customer.customerCode || ''
     });
-    const text = await resp.text();
-    console.log('saveOrderToSheet:', text);
+    if(result === 'Order Success') {
+      console.log('Order saved to Sheets:', d.orderNum);
+    } else {
+      console.error('Order save failed:', result);
+    }
   } catch(e) {
-    console.error('saveOrderToSheet failed:', e);
+    console.error('saveOrderToSheet error:', e);
   }
 }
+
 
 async function updateProductToSheet(p) {
   // ส่งข้อมูลสินค้าทั้งหมด (รวมถึง imageData) ไปบันทึกที่ Sheets
