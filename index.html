@@ -1460,9 +1460,10 @@ body { font-family:'Nunito',sans-serif; background:var(--g1); color:#1a1a2e; min
       <div class="settings-grid">
         <div class="settings-card">
           <h3>🔑 <span data-th="เปลี่ยนรหัสผ่าน Admin" data-en="Change Admin Password">Change Admin Password</span></h3>
-          <div class="form-group"><label class="form-label" data-th="Username ปัจจุบัน" data-en="Current Username">Current Username</label><input type="text" id="newAdminUser" class="form-input" placeholder="New username"></div>
-          <div class="form-group"><label class="form-label" data-th="Password ใหม่" data-en="New Password">New Password</label><input type="password" id="newAdminPass" class="form-input" placeholder="New password"></div>
-          <div class="form-group"><label class="form-label" data-th="ยืนยัน Password" data-en="Confirm Password">Confirm Password</label><input type="password" id="confirmAdminPass" class="form-input" placeholder="Confirm password"></div>
+          <div class="form-group"><label class="form-label" data-th="รหัสผ่านปัจจุบัน *" data-en="Current Password *">Current Password *</label><input type="password" id="currentAdminPass" class="form-input" placeholder="Current password (verify)"></div>
+          <div class="form-group"><label class="form-label" data-th="Username ใหม่" data-en="New Username">New Username</label><input type="text" id="newAdminUser" class="form-input" placeholder="New username"></div>
+          <div class="form-group"><label class="form-label" data-th="Password ใหม่" data-en="New Password">New Password</label><input type="password" id="newAdminPass" class="form-input" placeholder="New password (min 6 chars)"></div>
+          <div class="form-group"><label class="form-label" data-th="ยืนยัน Password" data-en="Confirm Password">Confirm Password</label><input type="password" id="confirmAdminPass" class="form-input" placeholder="Confirm new password"></div>
           <button class="save-settings-btn" onclick="changeAdminPassword()"><span data-th="เปลี่ยนรหัสผ่าน" data-en="Change Password">Change Password</span></button>
         </div>
         <div class="settings-card" style="grid-column:1/-1">
@@ -1859,8 +1860,8 @@ function rateLimitCheck(key, maxPerMin = 5) {
 const SESSION_KEY = 'kr_admin_session';
 const SESSION_DURATION = 4 * 60 * 60 * 1000; // 4 hours
 
-function saveAdminSession() {
-  const session = { exp: Date.now() + SESSION_DURATION, v: 1 };
+function saveAdminSession(token) {
+  const session = { exp: Date.now() + SESSION_DURATION, token: token||'', v: 2 };
   try { localStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch(e) {}
 }
 
@@ -1870,6 +1871,7 @@ function checkAdminSession() {
     if (!raw) return false;
     const s = JSON.parse(raw);
     if (Date.now() > s.exp) { localStorage.removeItem(SESSION_KEY); return false; }
+    if (!s.token) return false; // v2 requires token
     return true;
   } catch(e) { return false; }
 }
@@ -1920,7 +1922,7 @@ let editingProductId = null;
 let orders = [];
 
 // ===== ADMIN AUTH =====
-let adminCredentials = { username: 'krthailandshop', password: 'Kr_admin2626' };
+// Admin credentials stored securely in Google Sheets — not here
 let isAdminLoggedIn = false;
 let shopIsOpen = false;
 let displayCurrency = 'THB';
@@ -1968,25 +1970,48 @@ function showAdminLoginPopup() {
   setTimeout(()=>document.getElementById('alp-user')?.focus(), 100);
 }
 
-function doAdminLoginPopup() {
+async function doAdminLoginPopup() {
   if(!rateLimitCheck('adminLogin', 5)) {
     const err = document.getElementById('alp-error');
     if(err) { err.style.display='block'; err.textContent='Too many attempts. Please wait.'; }
     return;
   }
-  const u = (document.getElementById('alp-user')?.value||'').trim();
-  const p = document.getElementById('alp-pass')?.value||'';
+  const u   = (document.getElementById('alp-user')?.value||'').trim();
+  const p   = (document.getElementById('alp-pass')?.value||'').trim();
   const err = document.getElementById('alp-error');
-  if(u === adminCredentials.username && p === adminCredentials.password) {
-    isAdminLoggedIn = true;
-    saveAdminSession();
-    document.getElementById('adminLoginPopup')?.remove();
-    showPage('admin');
-    loadAdminData();
-    showToast('✅ Admin logged in');
-  } else {
-    if(err) { err.style.display='block'; err.textContent='Invalid username or password'; }
-    if(document.getElementById('alp-pass')) document.getElementById('alp-pass').value = '';
+  const btn = document.getElementById('alp-btn');
+
+  if(!u || !p) {
+    if(err) { err.style.display='block'; err.textContent='Please enter username and password'; }
+    return;
+  }
+
+  // Show loading
+  if(btn) { btn.disabled=true; btn.textContent='⏳ Verifying...'; }
+  if(err) err.style.display='none';
+
+  try {
+    // ส่งไปตรวจสอบกับ Apps Script (password ไม่ถูกเก็บใน HTML)
+    const resp = await fetch(scriptURL + '?type=adminAuth&apiKey=' + API_KEY +
+      '&u=' + encodeURIComponent(u) + '&p=' + encodeURIComponent(p) + '&t=' + Date.now());
+    const data = await resp.json();
+
+    if(data.success && data.token) {
+      isAdminLoggedIn = true;
+      // เก็บ token แทน password
+      saveAdminSession(data.token);
+      document.getElementById('adminLoginPopup')?.remove();
+      showPage('admin');
+      loadAdminData();
+      showToast('✅ Admin logged in');
+    } else {
+      if(err) { err.style.display='block'; err.textContent='Invalid username or password'; }
+      if(document.getElementById('alp-pass')) document.getElementById('alp-pass').value = '';
+      if(btn) { btn.disabled=false; btn.textContent='🔑 Login'; }
+    }
+  } catch(e) {
+    if(err) { err.style.display='block'; err.textContent='Connection error. Please try again.'; }
+    if(btn) { btn.disabled=false; btn.textContent='🔑 Login'; }
   }
 }
 
@@ -2038,18 +2063,42 @@ function toggleShop() {
   }
 }
 
-function changeAdminPassword() {
-  const u = document.getElementById('newAdminUser').value.trim();
-  const p = document.getElementById('newAdminPass').value;
-  const c = document.getElementById('confirmAdminPass').value;
-  if(!u || !p) { showToast('Please fill all fields'); return; }
-  if(p !== c) { showToast('Passwords do not match ❌'); return; }
-  if(p.length < 6) { showToast('Password must be at least 6 characters'); return; }
-  adminCredentials = { username: u, password: p };
-  document.getElementById('newAdminUser').value='';
-  document.getElementById('newAdminPass').value='';
-  document.getElementById('confirmAdminPass').value='';
-  showToast('Password changed successfully ✓');
+async function changeAdminPassword() {
+  const u    = document.getElementById('newAdminUser').value.trim();
+  const p    = document.getElementById('newAdminPass').value;
+  const conf = document.getElementById('confirmAdminPass').value;
+
+  const currentPass = document.getElementById('currentAdminPass')?.value||'';
+  if(!currentPass) { showToast(lang==='th'?'กรุณากรอกรหัสผ่านปัจจุบัน':'Please enter current password'); return; }
+  if(!u || !p) { showToast(lang==='th'?'กรุณากรอกให้ครบ':'Please fill all fields'); return; }
+  if(p !== conf) { showToast(lang==='th'?'รหัสผ่านไม่ตรงกัน ❌':'Passwords do not match ❌'); return; }
+  if(p.length < 6) { showToast(lang==='th'?'Password ต้องมีอย่างน้อย 6 ตัว':'Password must be at least 6 characters'); return; }
+
+  const btn = document.querySelector('[onclick="changeAdminPassword()"]');
+  if(btn) { btn.disabled=true; btn.textContent='⏳ Saving...'; }
+
+  try {
+    const resp = await fetch(scriptURL, {
+      method: 'POST',
+      body: JSON.stringify({ apiKey: API_KEY, type: 'ChangeAdminPassword', currentPassword: currentPass, username: u, password: p })
+    });
+    const text = await resp.text();
+    if(text === 'Password Changed') {
+      document.getElementById('newAdminUser').value  = '';
+      document.getElementById('newAdminPass').value  = '';
+      document.getElementById('confirmAdminPass').value = '';
+      // Clear old session so re-login required with new password
+      clearAdminSession();
+      showToast('✅ ' + (lang==='th'?'เปลี่ยนรหัสผ่านสำเร็จ กรุณา Login ใหม่':'Password changed! Please login again'));
+      setTimeout(()=>{ isAdminLoggedIn=false; showPage('landing'); }, 2000);
+    } else {
+      showToast('❌ ' + (lang==='th'?'เกิดข้อผิดพลาด ลองใหม่':'Error, please try again'));
+    }
+  } catch(e) {
+    showToast('❌ Connection error');
+  } finally {
+    if(btn) { btn.disabled=false; btn.textContent=lang==='th'?'เปลี่ยนรหัสผ่าน':'Change Password'; }
+  }
 }
 
 function adminLogout() {
@@ -4961,8 +5010,8 @@ function updateLandingCartBadge() {
 }
 
 // GOOGLE SHEETS INTEGRATION v2 — Full Persistence
-const scriptURL = 'https://script.google.com/macros/s/AKfycbyguz4MRncX1PJIKPyzU5zyphr9ATLB_sZiD04SEF8OEo9kvo_Eyl7T6r3tHbtBanV_/exec';
-const API_KEY = 'KR_kr_2026_shop_abc@2626'; //  Code_Secured.gs
+const scriptURL = 'https://script.google.com/macros/s/AKfycbwgRsgzUdUfNEopRTolrfSVeULG8JUDlWL6m9JDxtwMkNDtgyq7SfFdlsMguCybRYGU/exec';
+const API_KEY = 'KR_SHOP_2026_SECRET_KEY_CHANGE_ME@26'; // ⚠️ เปลี่ยนให้ตรงกับใน Code_Secured.gs
 
 // ─── LOADING OVERLAY ───
 function showLoadingOverlay(show) {
