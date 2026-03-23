@@ -2073,6 +2073,7 @@ async function changeAdminPassword() {
   if(!u || !p) { showToast(lang==='th'?'กรุณากรอกให้ครบ':'Please fill all fields'); return; }
   if(p !== conf) { showToast(lang==='th'?'รหัสผ่านไม่ตรงกัน ❌':'Passwords do not match ❌'); return; }
   if(p.length < 6) { showToast(lang==='th'?'Password ต้องมีอย่างน้อย 6 ตัว':'Password must be at least 6 characters'); return; }
+  if(u.length < 3) { showToast(lang==='th'?'Username ต้องมีอย่างน้อย 3 ตัว':'Username must be at least 3 characters'); return; }
 
   const btn = document.querySelector('[onclick="changeAdminPassword()"]');
   if(btn) { btn.disabled=true; btn.textContent='⏳ Saving...'; }
@@ -2083,17 +2084,23 @@ async function changeAdminPassword() {
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ apiKey: API_KEY, type: 'ChangeAdminPassword', currentPassword: currentPass, username: u, password: p })
     });
-    const text = await resp.text();
+    const text = (await resp.text()).trim();
     if(text === 'Password Changed') {
       document.getElementById('newAdminUser').value  = '';
       document.getElementById('newAdminPass').value  = '';
       document.getElementById('confirmAdminPass').value = '';
+      if(document.getElementById('currentAdminPass')) document.getElementById('currentAdminPass').value = '';
       // Clear old session so re-login required with new password
       clearAdminSession();
       showToast('✅ ' + (lang==='th'?'เปลี่ยนรหัสผ่านสำเร็จ กรุณา Login ใหม่':'Password changed! Please login again'));
       setTimeout(()=>{ isAdminLoggedIn=false; showPage('landing'); }, 2000);
+    } else if(text === 'Wrong current password') {
+      showToast('❌ ' + (lang==='th'?'รหัสผ่านปัจจุบันไม่ถูกต้อง':'Wrong current password'));
     } else {
-      showToast('❌ ' + (lang==='th'?'เกิดข้อผิดพลาด ลองใหม่':'Error, please try again'));
+      // อาจเป็น JSON error
+      let errMsg = text;
+      try { const j = JSON.parse(text); errMsg = j.error || text; } catch(e) {}
+      showToast('❌ ' + errMsg.slice(0,80));
     }
   } catch(e) {
     showToast('❌ Connection error');
@@ -4222,9 +4229,19 @@ async function uploadImageToDrive(base64Data, fileName) {
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ apiKey: API_KEY, type: 'UploadImage', imageData: base64Data, fileName: fileName || 'product.jpg' })
     });
-    const text = await resp.text();
-    let result;
-    try { result = JSON.parse(text); } catch(e) { result = null; }
+    // อ่าน text ก่อนแล้วค่อย parse เพื่อ debug ง่าย
+    const rawText = await resp.text();
+    let result = null;
+    try {
+      // ลอง parse JSON ตรงๆ
+      result = JSON.parse(rawText);
+    } catch(parseErr) {
+      // บางครั้ง Apps Script ส่งมาเป็น string ที่ wrap JSON อีกชั้น
+      const trimmed = rawText.trim();
+      if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+        try { result = JSON.parse(trimmed); } catch(e2) {}
+      }
+    }
     if (result && result.url) {
       currentImageURL  = result.url;
       currentImageData = null;
@@ -4232,16 +4249,20 @@ async function uploadImageToDrive(base64Data, fileName) {
       document.getElementById('previewImg').src = currentImageURL;
       showToast('✅ อัปโหลดรูปสำเร็จ');
     } else {
-      // fallback: ใช้ base64 แทน (รูปจะอยู่ชั่วคราว)
+      // fallback: ใช้ base64 แทน (รูปอยู่ชั่วคราว)
       currentImageData = base64Data;
       currentImageURL  = null;
-      document.getElementById('imageFileName').textContent = '⚠️ Drive ไม่ตอบ — ใช้ base64 แทน';
+      const errMsg = (result && result.error) ? result.error : 'Drive ไม่ตอบสนอง';
+      document.getElementById('imageFileName').textContent = '⚠️ ' + errMsg + ' — ใช้ base64 แทน';
+      console.error('UploadImage response:', rawText.slice(0, 200));
+      showToast('⚠️ อัปโหลด Drive ไม่สำเร็จ (' + errMsg + ') — รูปจะเก็บแบบ base64');
     }
   } catch(err) {
     console.error('Upload error:', err);
     currentImageData = base64Data;
     currentImageURL  = null;
     document.getElementById('imageFileName').textContent = '⚠️ Upload failed — ใช้ base64 แทน';
+    showToast('⚠️ เชื่อมต่อ Drive ไม่ได้ — รูปจะเก็บแบบ base64');
   }
 }
 
@@ -5045,7 +5066,7 @@ async function apiGet(params) {
   }
 }
 // GOOGLE SHEETS INTEGRATION v2 — Full Persistence
-const scriptURL = 'https://script.google.com/macros/s/AKfycbzMrWmMVNvqSpT2VE9wK0roPgnSAk5kCo1SwPwnXgpWTlmd2fvsBlQib2lfEHJ4_Vugug/exec';
+const scriptURL = 'https://script.google.com/macros/s/AKfycbyoJjb6tHPRT-zptOx-aw1LOC7xcmcddG8XD9mHRqtNRYox4W5UcJoeUAHNlcyVZTsD8g/exec';
 const API_KEY = 'KR_SHOP_2026_SECRET_KEY_CHANGE_ME'; // ต้องตรงกับ CONFIG.API_KEY ใน Code_Secured.gs
 
 // ─── LOADING OVERLAY ───
