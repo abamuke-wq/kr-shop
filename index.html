@@ -1981,6 +1981,10 @@ async function doAdminLoginPopup() {
   const err = document.getElementById('alp-error');
   const btn = document.getElementById('alp-btn');
 
+  // ── ล้าง password field ทันที ก่อนส่ง network request ──
+  // ทำให้ถ้ามีคนดู DOM หลังจากนี้ จะไม่เห็นรหัสผ่าน
+  if(document.getElementById('alp-pass')) document.getElementById('alp-pass').value = '';
+
   if(!u || !p) {
     if(err) { err.style.display='block'; err.textContent='Please enter username and password'; }
     return;
@@ -1991,9 +1995,14 @@ async function doAdminLoginPopup() {
   if(err) err.style.display='none';
 
   try {
-    // ส่งไปตรวจสอบกับ Apps Script (password ไม่ถูกเก็บใน HTML)
-    const resp = await fetch(scriptURL + '?type=adminAuth&apiKey=' + API_KEY +
-      '&u=' + encodeURIComponent(u) + '&p=' + encodeURIComponent(p) + '&t=' + Date.now());
+    // ── ส่ง POST ทำให้ credentials ไม่โชว์ใน URL / Network tab Headers ──
+    // username+password อยู่ใน request body (encrypted in transit via HTTPS)
+    const resp = await fetch(scriptURL, {
+      method: 'POST',
+      redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ apiKey: API_KEY, type: 'adminAuth', u: u, p: p })
+    });
     const data = await resp.json();
 
     if(data.success && data.token) {
@@ -5066,7 +5075,7 @@ async function apiGet(params) {
   }
 }
 // GOOGLE SHEETS INTEGRATION v2 — Full Persistence
-const scriptURL = 'https://script.google.com/macros/s/AKfycbyoJjb6tHPRT-zptOx-aw1LOC7xcmcddG8XD9mHRqtNRYox4W5UcJoeUAHNlcyVZTsD8g/exec';
+const scriptURL = 'https://script.google.com/macros/s/AKfycbx2vMjRYM10pUm_zC1nSJVl5Y88XjVE1wXEwvPMX3oC9O8UOpSONp3stD0X5JNfM2Ej8A/exec';
 const API_KEY = 'KR_SHOP_2026_SECRET_KEY_CHANGE_ME'; // ต้องตรงกับ CONFIG.API_KEY ใน Code_Secured.gs
 
 // ─── LOADING OVERLAY ───
