@@ -3890,7 +3890,6 @@ function saveShipping() {
 // ============================================================
 async function loadAllFromSheet() {
   showLoadingOverlay(true);
-  // timeout 10 วิ ถ้าโหลดไม่เสร็จให้ปิด overlay เอง
   const timeout = setTimeout(() => showLoadingOverlay(false), 10000);
   try {
     await Promise.all([
@@ -3915,7 +3914,10 @@ function saveShippingToSheet() {
   [2,3,4,5,6,7,8].forEach(n => {
     rows.push([n, ...['A','B','C','D','E'].map(z => (zoneShippingRates[z]||{})[n] || 0)]);
   });
-  fetch(scriptURL, { method:'POST', mode:'no-cors', body: JSON.stringify({ apiKey: API_KEY, type:'SaveShipping', rows }) });
+  apiPost({ type:'SaveShipping', rows }).then(r => {
+    if(r) showToast('✅ ' + (lang==='th'?'บันทึกค่าขนส่งแล้ว':'Shipping rates saved'));
+    else showToast('❌ Save failed');
+  });
 }
 
 // ============================================================
@@ -5010,9 +5012,39 @@ function updateLandingCartBadge() {
   if(badge) { badge.textContent = total; badge.style.display = total>0?'inline-flex':'none'; }
 }
 
+
+// ===== UNIVERSAL API CALL HELPER =====
+async function apiPost(payload) {
+  try {
+    const resp = await fetch(scriptURL, {
+      method:   'POST',
+      redirect: 'follow',
+      headers:  { 'Content-Type': 'text/plain;charset=utf-8' },
+      body:     JSON.stringify({ apiKey: API_KEY, ...payload })
+    });
+    const text = await resp.text();
+    return text;
+  } catch(e) {
+    console.error('API POST error:', e);
+    return null;
+  }
+}
+
+async function apiGet(params) {
+  try {
+    const qs = Object.entries({ apiKey: API_KEY, ...params })
+      .map(([k,v]) => `${k}=${encodeURIComponent(v)}`)
+      .join('&');
+    const resp = await fetch(`${scriptURL}?${qs}&t=${Date.now()}`);
+    return await resp.json();
+  } catch(e) {
+    console.error('API GET error:', e);
+    return null;
+  }
+}
 // GOOGLE SHEETS INTEGRATION v2 — Full Persistence
-const scriptURL = 'https://script.google.com/macros/s/AKfycbyZz2dEpZ6WBj21CkxNsktv3ICLb6o4sxLjcY3JcQaV4bQ-S5QOntOqydMigrEZj0ZW/exec';
-const API_KEY = 'KR_SHOP_2026_SECRET_KEY_CHANGE_ME26'; // Code_Secured.gs
+const scriptURL = 'https://script.google.com/macros/s/AKfycbzR4zM4DZgLVG1xThZzbibDTC1fzPu5c2RHZAXPZ-HNpAUC9n6fsLSUkYfdqnMH09e-/exec';
+const API_KEY = 'KR_SHOP_2026_SECRET_KEY_CHANGE_ME26'; //  Code_Secured.gs
 
 // ─── LOADING OVERLAY ───
 function showLoadingOverlay(show) {
@@ -5035,7 +5067,7 @@ function showLoadingOverlay(show) {
 async function loadProductsFromSheet() {
   try {
     // ดึงข้อมูลสินค้าโดยระบุ type=products
-    const resp = await fetch(scriptURL + '?type=products&apiKey=' + API_KEY);
+    const resp = await fetch(`${scriptURL}?type=products&apiKey=${API_KEY}&t=${Date.now()}`);
     const data = await resp.json();
     
     if (data && data.length > 0) {
@@ -5103,18 +5135,18 @@ async function saveOrderToSheet(d) {
 
 async function updateProductToSheet(p) {
   // ส่งข้อมูลสินค้าทั้งหมด (รวมถึง imageData) ไปบันทึกที่ Sheets
-  fetch(scriptURL, { method:'POST', mode:'no-cors', body: JSON.stringify({ apiKey: API_KEY, type:'UpdateProduct', ...p }) });
+  apiPost({ type:'UpdateProduct', ...p });
 }
 
 async function deleteProductFromSheet(id) {
-  fetch(scriptURL, { method:'POST', mode:'no-cors', body: JSON.stringify({ apiKey: API_KEY, type:'DeleteProduct', id }) });
+  apiPost({ type:'DeleteProduct', id });
 }
 
 
 // ─── SETTINGS ───
 async function loadSettingsFromSheet() {
   try {
-    const resp = await fetch(scriptURL + '?type=settings&apiKey=' + API_KEY + '&t=' + Date.now());
+    const resp = await fetch(`${scriptURL}?type=settings&apiKey=${API_KEY}&t=${Date.now()}`);
     const data = await resp.json();
     if (!data || Object.keys(data).length === 0) return;
     if (data.shopName) {
@@ -5149,13 +5181,15 @@ function saveSettingsToSheet() {
     grad2: document.getElementById('color2')?.value || '',
     accent: document.getElementById('color3')?.value || '',
   };
-  fetch(scriptURL, { method:'POST', mode:'no-cors', body: JSON.stringify({ apiKey: API_KEY, type:'SaveSettings', settings }) });
+  apiPost({ type:'SaveSettings', settings }).then(r => {
+    if(r) showToast('✅ ' + (lang==='th'?'บันทึก Settings แล้ว':'Settings saved'));
+  });
 }
 
 // ─── SHIPPING RATES ───
 async function loadShippingFromSheet() {
   try {
-    const resp = await fetch(scriptURL + '?type=shipping&apiKey=' + API_KEY);
+    const resp = await fetch(`${scriptURL}?type=shipping&apiKey=${API_KEY}&t=${Date.now()}`);
     const data = await resp.json();
     if (!data || Object.keys(data).length === 0) return;
     // data = { 2: { A:500, B:600, ... }, 3: { ... }, ... }
@@ -5218,7 +5252,7 @@ saveUsdRate = function() {
 // ─── LOAD ORDERS FROM SHEET ───
 async function loadOrdersFromSheet() {
   try {
-    const url = scriptURL + '?type=orders&t=' + Date.now();
+    const url = `${scriptURL}?type=orders&apiKey=${API_KEY}&t=${Date.now()}`;
     const resp = await fetch(url);
     const data = await resp.json();
     console.log('Orders raw data:', data);
@@ -5614,9 +5648,7 @@ function confirmAndCloseInvoice() {
 
   // อัปเดต Sheets
   orders[_invoiceOrderIdx].status = 'confirmed';
-  fetch(scriptURL, { method:'POST', mode:'no-cors',
-    body: JSON.stringify({
-      apiKey: API_KEY,
+  apiPost({
       type:          'UpdateOrderStatus',
       orderNum:      o.num,
       status:        'confirmed',
@@ -5625,8 +5657,7 @@ function confirmAndCloseInvoice() {
       discShipping:  discShipAmt,
       grandTotal:    grandTotal,
       invoiceNote:   note,
-    })
-  });
+  }).then(r => r && showToast('✅ Confirmed'));
 
   closeInvoiceModal();
   _updateOrdersBadge();
