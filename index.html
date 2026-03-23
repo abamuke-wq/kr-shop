@@ -2836,7 +2836,7 @@ let customers = [];
 
 async function loadCustomersFromSheet() {
   try {
-    const resp = await fetch(scriptURL + '?type=customers&t=' + Date.now());
+    const resp = await fetch(scriptURL + '?type=customers&apiKey=' + API_KEY + '&t=' + Date.now());
     customers = await resp.json();
     if (!Array.isArray(customers)) customers = [];
   } catch(e) {
@@ -3930,7 +3930,7 @@ function deleteAdminOrder(i) {
     method:   'POST',
     redirect: 'follow',
     headers:  { 'Content-Type': 'text/plain' },
-    body:     JSON.stringify({ type: 'DeleteOrder', orderNum: o.num })
+    body:     JSON.stringify({ apiKey: API_KEY, type: 'DeleteOrder', orderNum: o.num })
   })
   .then(r => r.text())
   .then(result => {
@@ -3959,6 +3959,7 @@ function confirmAdminOrder(i) {
     redirect: 'follow',
     headers:  { 'Content-Type': 'text/plain' },
     body: JSON.stringify({
+      apiKey: API_KEY,
       type:          'UpdateOrderStatus',
       orderNum:      o.num,
       status:        'confirmed',
@@ -5010,8 +5011,8 @@ function updateLandingCartBadge() {
 }
 
 // GOOGLE SHEETS INTEGRATION v2 — Full Persistence
-const scriptURL = 'https://script.google.com/macros/s/AKfycby7LFSTCbaeOK1hcaOeOCKavxamYbJFiCSMA4pQqKjQG-bzXGoIg4SecMZT7Gu1DXfX/exec';
-const API_KEY = 'KR_SHOP_2026_SECRET_KEY_CHANGE_ME26'; // ⚠️ เปลี่ยนให้ตรงกับใน Code_Secured.gs
+const scriptURL = 'https://script.google.com/macros/s/AKfycbyZz2dEpZ6WBj21CkxNsktv3ICLb6o4sxLjcY3JcQaV4bQ-S5QOntOqydMigrEZj0ZW/exec';
+const API_KEY = 'KR_SHOP_2026_SECRET_KEY_CHANGE_ME26'; // Code_Secured.gs
 
 // ─── LOADING OVERLAY ───
 function showLoadingOverlay(show) {
@@ -5079,6 +5080,7 @@ async function saveOrderToSheet(d) {
       redirect: 'follow',
       headers:  { 'Content-Type': 'text/plain' },
       body: JSON.stringify({
+        apiKey: API_KEY,
         type:         'Orders',
         orderNum:     d.orderNum,
         name:         d.customer.name,
@@ -5112,7 +5114,7 @@ async function deleteProductFromSheet(id) {
 // ─── SETTINGS ───
 async function loadSettingsFromSheet() {
   try {
-    const resp = await fetch(scriptURL + '?type=settings&t=' + Date.now());
+    const resp = await fetch(scriptURL + '?type=settings&apiKey=' + API_KEY + '&t=' + Date.now());
     const data = await resp.json();
     if (!data || Object.keys(data).length === 0) return;
     if (data.shopName) {
@@ -5614,6 +5616,7 @@ function confirmAndCloseInvoice() {
   orders[_invoiceOrderIdx].status = 'confirmed';
   fetch(scriptURL, { method:'POST', mode:'no-cors',
     body: JSON.stringify({
+      apiKey: API_KEY,
       type:          'UpdateOrderStatus',
       orderNum:      o.num,
       status:        'confirmed',
