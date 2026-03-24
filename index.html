@@ -44,19 +44,19 @@ body { font-family:'Nunito',sans-serif; background:var(--g1); color:#1a1a2e; min
   border-bottom:1px solid rgba(214,51,132,0.15);
   box-shadow:0 2px 16px rgba(214,51,132,0.08);
   display:flex; align-items:center; justify-content:space-between;
-  padding:0 8px; height:56px; gap:2px; overflow:visible;
+  padding:0 6px; height:56px; gap:0; overflow:visible;
 }
-.nav-brand { display:flex; align-items:center; gap:5px; font-family:'Playfair Display',serif; font-size:clamp(11px,2.8vw,16px); color:var(--accent); letter-spacing:0.3px; white-space:nowrap; flex-shrink:1; min-width:0; overflow:hidden; text-overflow:ellipsis; max-width:30vw; }
-.nav-logo { width:28px; height:28px; border-radius:50%; object-fit:cover; flex-shrink:0; border:1.5px solid rgba(214,51,132,0.2); box-shadow:0 2px 8px rgba(214,51,132,0.15); }
-.nav-menu { display:flex; gap:2px; flex-shrink:0; }
+.nav-brand { display:flex; align-items:center; gap:4px; font-family:'Playfair Display',serif; font-size:clamp(10px,2.5vw,15px); color:var(--accent); letter-spacing:0.2px; white-space:nowrap; flex-shrink:1; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+.nav-logo { width:26px; height:26px; border-radius:50%; object-fit:cover; flex-shrink:0; border:1.5px solid rgba(214,51,132,0.2); box-shadow:0 2px 8px rgba(214,51,132,0.15); }
+.nav-menu { display:flex; gap:0; flex-shrink:0; }
 .nav-btn {
-  padding:5px 8px; border:none; background:transparent; color:#666;
+  padding:5px 6px; border:none; background:transparent; color:#666;
   cursor:pointer; font-family:'Nunito',sans-serif; font-size:11px; border-radius:20px;
   transition:all 0.2s; font-weight:600; white-space:nowrap; flex-shrink:0;
 }
 .nav-btn.active, .nav-btn:hover { background:var(--accent); color:white; }
-.lang-switch { display:flex; flex-direction:column; gap:2px; flex-shrink:0; }
-.lang-btn { padding:2px 5px; border:1px solid rgba(214,51,132,0.3); background:transparent; color:#888; cursor:pointer; font-size:9px; border-radius:6px; transition:all 0.2s; font-weight:700; line-height:1.4; }
+.lang-switch { display:flex; flex-direction:column; gap:1px; flex-shrink:0; margin-left:2px; }
+.lang-btn { padding:2px 4px; border:1px solid rgba(214,51,132,0.3); background:transparent; color:#888; cursor:pointer; font-size:9px; border-radius:5px; transition:all 0.2s; font-weight:700; line-height:1.4; }
 .lang-btn.active { background:var(--teal); color:white; border-color:var(--teal); }
 
 /* ===== LANDING PAGE ===== */
@@ -991,28 +991,29 @@ body { font-family:'Nunito',sans-serif; background:var(--g1); color:#1a1a2e; min
 
 <!-- NAV -->
 <nav class="nav" id="mainNav">
-  <div class="nav-brand" id="navBrand"><img id="navLogoImg" class="nav-logo" src="" alt="K&R Logo" onerror="this.style.display='none'">K&R Thailand Shop</div>
+  <!-- ซ้าย: โลโก้ + ชื่อร้าน -->
+  <div class="nav-brand" id="navBrand"><img id="navLogoImg" class="nav-logo" src="" alt="K&R Logo" style="display:none" onerror="this.style.display='none'">K&R Thailand Shop</div>
+  <!-- กลาง: เมนู -->
   <div class="nav-menu">
     <button class="nav-btn active" onclick="showPage('landing')" data-th="หน้าแรก" data-en="Home">Home</button>
-    <button class="nav-btn" id="cartNavBtn" onclick="showPage('shop')" data-th="ตะกร้า" data-en="Cart" style="position:relative">
-      🛒 <span data-th="ตะกร้า" data-en="Cart">Cart</span>
+    <button class="nav-btn" id="cartNavBtn" onclick="showPage('shop')" data-th="ตะกร้า" data-en="Order" style="position:relative">
+      Order
       <span id="cartNavBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:var(--accent);color:white;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;align-items:center;justify-content:center">0</span>
     </button>
   </div>
-  <!-- Login + Admin buttons on right side of nav -->
-  <div style="display:flex;align-items:center;gap:8px">
+  <!-- ขวา: Login + ⚙️ + TH/EN รวมกลุ่มเดียว -->
+  <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
     <button id="navLoginBtn" onclick="showNavLoginPopup()"
-      style="padding:5px 10px;background:white;border:1.5px solid rgba(214,51,132,0.3);border-radius:20px;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif;transition:all 0.2s;white-space:nowrap">
+      style="padding:4px 10px;background:white;border:1.5px solid rgba(214,51,132,0.3);border-radius:20px;color:var(--accent);cursor:pointer;font-size:11px;font-weight:700;font-family:'Nunito',sans-serif;transition:all 0.2s;white-space:nowrap">
       <span id="navLoginBtnText" data-th="เข้าสู่ระบบ" data-en="Login">Login</span>
     </button>
     <button onclick="requireAdmin()" title="Admin"
-      style="padding:4px 6px;background:transparent;border:none;cursor:pointer;font-size:16px;opacity:0.5;transition:opacity 0.2s;flex-shrink:0" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.5'">
-      ⚙️
+      style="padding:2px 3px;background:transparent;border:none;cursor:pointer;font-size:15px;opacity:0.5;transition:opacity 0.2s;flex-shrink:0" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.5'">⚙️
     </button>
-  </div>
-  <div class="lang-switch">
-    <button class="lang-btn" onclick="setLang('th')">TH</button>
-    <button class="lang-btn active" onclick="setLang('en')">EN</button>
+    <div class="lang-switch">
+      <button class="lang-btn" onclick="setLang('th')">TH</button>
+      <button class="lang-btn active" onclick="setLang('en')">EN</button>
+    </div>
   </div>
 </nav>
 
