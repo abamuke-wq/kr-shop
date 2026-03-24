@@ -44,19 +44,19 @@ body { font-family:'Nunito',sans-serif; background:var(--g1); color:#1a1a2e; min
   border-bottom:1px solid rgba(214,51,132,0.15);
   box-shadow:0 2px 16px rgba(214,51,132,0.08);
   display:flex; align-items:center; justify-content:space-between;
-  padding:0 12px; height:56px; gap:4px; overflow:hidden;
+  padding:0 8px; height:56px; gap:2px; overflow:visible;
 }
-.nav-brand { display:flex; align-items:center; gap:7px; font-family:'Playfair Display',serif; font-size:clamp(13px,3.5vw,18px); color:var(--accent); letter-spacing:0.5px; white-space:nowrap; flex-shrink:0; }
-.nav-logo { width:clamp(28px,7vw,36px); height:clamp(28px,7vw,36px); border-radius:50%; object-fit:cover; flex-shrink:0; border:1.5px solid rgba(214,51,132,0.2); box-shadow:0 2px 8px rgba(214,51,132,0.15); }
-.nav-menu { display:flex; gap:4px; }
+.nav-brand { display:flex; align-items:center; gap:5px; font-family:'Playfair Display',serif; font-size:clamp(11px,2.8vw,16px); color:var(--accent); letter-spacing:0.3px; white-space:nowrap; flex-shrink:1; min-width:0; overflow:hidden; text-overflow:ellipsis; max-width:30vw; }
+.nav-logo { width:28px; height:28px; border-radius:50%; object-fit:cover; flex-shrink:0; border:1.5px solid rgba(214,51,132,0.2); box-shadow:0 2px 8px rgba(214,51,132,0.15); }
+.nav-menu { display:flex; gap:2px; flex-shrink:0; }
 .nav-btn {
-  padding:5px 10px; border:none; background:transparent; color:#666;
-  cursor:pointer; font-family:'Nunito',sans-serif; font-size:12px; border-radius:20px;
-  transition:all 0.2s; font-weight:600; white-space:nowrap;
+  padding:5px 8px; border:none; background:transparent; color:#666;
+  cursor:pointer; font-family:'Nunito',sans-serif; font-size:11px; border-radius:20px;
+  transition:all 0.2s; font-weight:600; white-space:nowrap; flex-shrink:0;
 }
 .nav-btn.active, .nav-btn:hover { background:var(--accent); color:white; }
 .lang-switch { display:flex; flex-direction:column; gap:2px; flex-shrink:0; }
-.lang-btn { padding:2px 6px; border:1px solid rgba(214,51,132,0.3); background:transparent; color:#888; cursor:pointer; font-size:10px; border-radius:6px; transition:all 0.2s; font-weight:700; line-height:1.4; }
+.lang-btn { padding:2px 5px; border:1px solid rgba(214,51,132,0.3); background:transparent; color:#888; cursor:pointer; font-size:9px; border-radius:6px; transition:all 0.2s; font-weight:700; line-height:1.4; }
 .lang-btn.active { background:var(--teal); color:white; border-color:var(--teal); }
 
 /* ===== LANDING PAGE ===== */
@@ -991,7 +991,7 @@ body { font-family:'Nunito',sans-serif; background:var(--g1); color:#1a1a2e; min
 
 <!-- NAV -->
 <nav class="nav" id="mainNav">
-  <div class="nav-brand" id="navBrand"><img id="navLogoImg" class="nav-logo" src="" alt="K&R Logo" style="display:none" onerror="this.style.display='none'">K&R Thailand Shop</div>
+  <div class="nav-brand" id="navBrand"><img id="navLogoImg" class="nav-logo" src="" alt="K&R Logo" onerror="this.style.display='none'">K&R Thailand Shop</div>
   <div class="nav-menu">
     <button class="nav-btn active" onclick="showPage('landing')" data-th="หน้าแรก" data-en="Home">Home</button>
     <button class="nav-btn" id="cartNavBtn" onclick="showPage('shop')" data-th="ตะกร้า" data-en="Cart" style="position:relative">
@@ -2220,33 +2220,7 @@ let shopSettings = { name:'K&R Thailand Shop', line:'@krthailandshop', wa:'+6663
 function applyLogo(url) {
   shopSettings.logoURL = url || '';
   const navLogo = document.getElementById('navLogoImg');
-  if (navLogo) {
-    if (url) {
-      navLogo.style.display = 'block'; // แสดงก่อน
-      navLogo.src = url;
-      navLogo.onerror = function() {
-        this.style.display = 'none';   // ซ่อนถ้าโหลดไม่ได้จริงๆ
-        this.src = '';
-      };
-      navLogo.onload = function() {
-        this.style.display = 'block';  // ยืนยันแสดงเมื่อโหลดสำเร็จ
-      };
-    } else {
-      navLogo.style.display = 'none';
-      navLogo.src = '';
-    }
-  }
-  // อัปเดต logo preview ในหน้า Settings ด้วย
-  const preview = document.getElementById('logoPreview');
-  const wrap    = document.getElementById('logoPreviewWrap');
-  if (preview && wrap) {
-    if (url) {
-      preview.src = url;
-      wrap.style.display = 'block';
-    } else {
-      wrap.style.display = 'none';
-    }
-  }
+  if (navLogo) { navLogo.src = url || ''; navLogo.style.display = url ? 'block' : 'none'; }
 }
 
 // ===== LANG =====
@@ -4409,12 +4383,12 @@ function saveSettings() {
   shopSettings.wa   = document.getElementById('settingWA').value.trim();
   const logoURL = (document.getElementById('settingLogoURL')?.value||'').trim();
   applyLogo(logoURL);
-  // แก้ navBrand ให้ไม่ทับโลโก้ — เก็บ img ก่อน clear innerHTML
+  // แก้ navBrand ให้ไม่ทับโลโก้
   const navBrand = document.getElementById('navBrand');
   if (navBrand) {
-    const img = navBrand.querySelector('img'); // เก็บ reference ก่อน
+    const img = navBrand.querySelector('img');
     navBrand.innerHTML = '';
-    if (img) navBrand.appendChild(img);        // ใส่กลับ (img ยังอยู่ใน memory)
+    if (img) navBrand.appendChild(img);
     navBrand.appendChild(document.createTextNode(shopSettings.name));
   }
   document.getElementById('heroLogo').textContent = shopSettings.name.split(' ')[0]||'K&R';
@@ -5238,12 +5212,12 @@ async function loadSettingsFromSheet() {
     if (!data || Object.keys(data).length === 0) return;
     if (data.shopName) {
       shopSettings.name = data.shopName;
-      // แก้ navBrand ให้ไม่ทับโลโก้ — เก็บ img ก่อน clear innerHTML
+      // แก้ navBrand ให้ไม่ทับโลโก้
       const navBrand = document.getElementById('navBrand');
       if (navBrand) {
-        const img = navBrand.querySelector('img'); // เก็บ reference ก่อน
+        const img = navBrand.querySelector('img');
         navBrand.innerHTML = '';
-        if (img) navBrand.appendChild(img);        // ใส่กลับ
+        if (img) navBrand.appendChild(img);
         navBrand.appendChild(document.createTextNode(data.shopName));
       }
       const hl = document.getElementById('heroLogo');
