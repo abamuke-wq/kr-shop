@@ -991,7 +991,7 @@ body { font-family:'Nunito',sans-serif; background:var(--g1); color:#1a1a2e; min
 
 <!-- NAV -->
 <nav class="nav" id="mainNav">
-  <div class="nav-brand" id="navBrand"><img id="navLogoImg" class="nav-logo" src="" alt="K&R Logo" onerror="this.style.display='none'">K&R Thailand Shop</div>
+  <div class="nav-brand" id="navBrand"><img id="navLogoImg" class="nav-logo" src="" alt="K&R Logo" style="display:none" onerror="this.style.display='none'">K&R Thailand Shop</div>
   <div class="nav-menu">
     <button class="nav-btn active" onclick="showPage('landing')" data-th="หน้าแรก" data-en="Home">Home</button>
     <button class="nav-btn" id="cartNavBtn" onclick="showPage('shop')" data-th="ตะกร้า" data-en="Cart" style="position:relative">
@@ -2220,7 +2220,33 @@ let shopSettings = { name:'K&R Thailand Shop', line:'@krthailandshop', wa:'+6663
 function applyLogo(url) {
   shopSettings.logoURL = url || '';
   const navLogo = document.getElementById('navLogoImg');
-  if (navLogo) { navLogo.src = url || ''; navLogo.style.display = url ? 'block' : 'none'; }
+  if (navLogo) {
+    if (url) {
+      navLogo.style.display = 'block'; // แสดงก่อน
+      navLogo.src = url;
+      navLogo.onerror = function() {
+        this.style.display = 'none';   // ซ่อนถ้าโหลดไม่ได้จริงๆ
+        this.src = '';
+      };
+      navLogo.onload = function() {
+        this.style.display = 'block';  // ยืนยันแสดงเมื่อโหลดสำเร็จ
+      };
+    } else {
+      navLogo.style.display = 'none';
+      navLogo.src = '';
+    }
+  }
+  // อัปเดต logo preview ในหน้า Settings ด้วย
+  const preview = document.getElementById('logoPreview');
+  const wrap    = document.getElementById('logoPreviewWrap');
+  if (preview && wrap) {
+    if (url) {
+      preview.src = url;
+      wrap.style.display = 'block';
+    } else {
+      wrap.style.display = 'none';
+    }
+  }
 }
 
 // ===== LANG =====
@@ -4383,17 +4409,17 @@ function saveSettings() {
   shopSettings.wa   = document.getElementById('settingWA').value.trim();
   const logoURL = (document.getElementById('settingLogoURL')?.value||'').trim();
   applyLogo(logoURL);
-  // แก้ navBrand ให้ไม่ทับโลโก้
+  // แก้ navBrand ให้ไม่ทับโลโก้ — เก็บ img ก่อน clear innerHTML
   const navBrand = document.getElementById('navBrand');
   if (navBrand) {
-    const img = navBrand.querySelector('img');
+    const img = navBrand.querySelector('img'); // เก็บ reference ก่อน
     navBrand.innerHTML = '';
-    if (img) navBrand.appendChild(img);
+    if (img) navBrand.appendChild(img);        // ใส่กลับ (img ยังอยู่ใน memory)
     navBrand.appendChild(document.createTextNode(shopSettings.name));
   }
   document.getElementById('heroLogo').textContent = shopSettings.name.split(' ')[0]||'K&R';
   document.getElementById('orderShopName').textContent = shopSettings.name;
-  // ไม่ showToast ที่นี่ — ให้ saveSettingsToSheet() แสดงผลหลัง API ตอบกลับ
+  showToast(lang==='th'?'บันทึกแล้ว ✓':'Settings saved ✓');
 }
 
 function applyColors() {
@@ -5212,12 +5238,12 @@ async function loadSettingsFromSheet() {
     if (!data || Object.keys(data).length === 0) return;
     if (data.shopName) {
       shopSettings.name = data.shopName;
-      // แก้ navBrand ให้ไม่ทับโลโก้
+      // แก้ navBrand ให้ไม่ทับโลโก้ — เก็บ img ก่อน clear innerHTML
       const navBrand = document.getElementById('navBrand');
       if (navBrand) {
-        const img = navBrand.querySelector('img');
+        const img = navBrand.querySelector('img'); // เก็บ reference ก่อน
         navBrand.innerHTML = '';
-        if (img) navBrand.appendChild(img);
+        if (img) navBrand.appendChild(img);        // ใส่กลับ
         navBrand.appendChild(document.createTextNode(data.shopName));
       }
       const hl = document.getElementById('heroLogo');
@@ -5244,8 +5270,6 @@ async function loadSettingsFromSheet() {
 }
 
 function saveSettingsToSheet() {
-  // แสดง toast ทันทีเพื่อบอกว่ากำลัง save
-  showToast(lang==='th'?'⏳ กำลังบันทึก...':'⏳ Saving...');
   const settings = {
     shopName: shopSettings.name,
     shopLine: shopSettings.line,
@@ -5258,15 +5282,7 @@ function saveSettingsToSheet() {
     accent: document.getElementById('color3')?.value || '',
   };
   apiPost({ type:'SaveSettings', settings }).then(r => {
-    if(r === 'Settings Saved') {
-      showToast('✅ ' + (lang==='th'?'บันทึกแล้ว':'Settings saved'));
-    } else if(r) {
-      showToast('⚠️ ' + r);
-    } else {
-      showToast('❌ ' + (lang==='th'?'บันทึกไม่สำเร็จ ลองใหม่':'Save failed, try again'));
-    }
-  }).catch(() => {
-    showToast('❌ ' + (lang==='th'?'เชื่อมต่อไม่ได้':'Connection error'));
+    if(r) showToast('✅ ' + (lang==='th'?'บันทึก Settings แล้ว':'Settings saved'));
   });
 }
 
